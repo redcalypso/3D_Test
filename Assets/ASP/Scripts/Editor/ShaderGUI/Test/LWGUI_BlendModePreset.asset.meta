@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 53fe229f137bdee4db612b5564aea37c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Scripts/Editor/ShaderGUI/Test/LWGUI_BlendModePreset.asset
+  uploadId: 813382

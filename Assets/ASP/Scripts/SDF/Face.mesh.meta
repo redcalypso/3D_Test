@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 1532e28afdae39b4fb49e5c1b4f1aa12
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 4300000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Scripts/SDF/Face.mesh
+  uploadId: 813382

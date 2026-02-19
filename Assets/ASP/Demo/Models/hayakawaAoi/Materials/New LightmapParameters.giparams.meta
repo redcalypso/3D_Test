@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 2d747546f690f7b449b62ae0cec0a4cf
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 111300000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Models/hayakawaAoi/Materials/New LightmapParameters.giparams
+  uploadId: 813382

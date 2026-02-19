@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 6a1deed6e3f2b4d4a82ce8ea41998018
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Scripts/ObjectRotator.cs
+  uploadId: 813382

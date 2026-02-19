@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 637dc318e14e1a248af599ec1eb25a8b
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 8574412962073106934
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Terrain/Grid.terrainlayer
+  uploadId: 813382

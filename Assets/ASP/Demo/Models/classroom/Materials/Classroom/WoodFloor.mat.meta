@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d00db6d6e22a81847a3874454cc74c8a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Models/classroom/Materials/Classroom/WoodFloor.mat
+  uploadId: 813382

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 8234282cc7a61384291f51d53da19f6c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Materials/Anime/AnimeBG0.mat
+  uploadId: 813382

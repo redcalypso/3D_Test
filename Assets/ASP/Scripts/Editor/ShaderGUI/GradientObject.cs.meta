@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: aff2e4cf84cc411195a546e04d7c2ee5
+timeCreated: 1702463134
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Scripts/Editor/ShaderGUI/GradientObject.cs
+  uploadId: 813382

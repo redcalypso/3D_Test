@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: beddcd7e772b7e74786ed19f02105eb0
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Models/unity-chan!/Materials/debugGI/eye_R1.mat
+  uploadId: 813382

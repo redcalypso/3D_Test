@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: f7f640a3e7f8402b832466335efd6c3e
+timeCreated: 1705398842
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Shaders/DummyShadowCaster.shader
+  uploadId: 813382

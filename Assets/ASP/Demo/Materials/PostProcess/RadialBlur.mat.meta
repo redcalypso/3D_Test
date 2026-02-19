@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 784eed7b6a410514cb3bf8db7626a21f
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Materials/PostProcess/RadialBlur.mat
+  uploadId: 813382

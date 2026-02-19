@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 5ebd35200f1b4a64af2b7a48699606db
+timeCreated: 1708844687
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Scripts/RenderPass/ASPMeshOutlineRendererFeature.cs
+  uploadId: 813382

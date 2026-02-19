@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: a50401abe8ebf10418f05832c721b521
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Materials/DemoMaterials/Skybox 2.mat
+  uploadId: 813382

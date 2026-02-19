@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 89fb046dce5da5e4280597f6ba4e44f4
+ShaderIncludeImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Shaders/SRP/ScreenCoordOverride.hlsl
+  uploadId: 813382

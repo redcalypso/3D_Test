@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: da090983a20e7c348bbd7dc8134c6cad
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Models/hayakawaAoi/Materials/PBR/EyeGlass_Lens_M.mat
+  uploadId: 813382

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: cde1ec3da03626f42969ce21108015b6
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/URP/URPAsset.asset
+  uploadId: 813382

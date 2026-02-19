@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: aa287097d78b45529d427cbf3002033d
+timeCreated: 1705307422
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Scripts/RenderPass/RTPreviewer.cs
+  uploadId: 813382

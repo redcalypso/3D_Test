@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 10527500c0fc66345ada48eafc5f40d7
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Shaders/SDF/SDFMerger.shader
+  uploadId: 813382

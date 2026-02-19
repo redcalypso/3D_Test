@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 5f81b150f373e8840ab13769ce55ea16
+AssemblyDefinitionImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Scripts/Editor/ShaderGUI/LWGUIExtend.asmdef
+  uploadId: 813382

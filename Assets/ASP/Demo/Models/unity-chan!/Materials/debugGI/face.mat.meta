@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: bc82f1eff0f19304281d32d895a4f0bb
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Models/unity-chan!/Materials/debugGI/face.mat
+  uploadId: 813382

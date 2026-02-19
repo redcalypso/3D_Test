@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 8c51e5e10a8acfd4ba0fcef73b7cf7d0
+timeCreated: 1513679960
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Scripts/SpringBone/Editor/AngleLimitsPropertyInfo.cs
+  uploadId: 813382

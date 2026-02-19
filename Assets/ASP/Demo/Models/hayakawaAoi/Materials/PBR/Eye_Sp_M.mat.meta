@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 04a243dd596f06b4489a575d97030e62
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Models/hayakawaAoi/Materials/PBR/Eye_Sp_M.mat
+  uploadId: 813382

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: d469645b1c4c8a844852c3efc3ccf64c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Scripts/Editor/ShaderGUI/Test/LWGUI_SampleDrawer.mat
+  uploadId: 813382

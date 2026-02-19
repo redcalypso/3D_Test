@@ -1,0 +1,19 @@
+fileFormatVersion: 2
+guid: 4b730964483f43944a5167eab6febf72
+timeCreated: 1513680030
+licenseType: Store
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Scripts/SpringBone/Colliders/Circle3.cs
+  uploadId: 813382

@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: e0462500800546dbbc022e20be5ce2a7
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Shaders/PostProcessOutline.shader
+  uploadId: 813382

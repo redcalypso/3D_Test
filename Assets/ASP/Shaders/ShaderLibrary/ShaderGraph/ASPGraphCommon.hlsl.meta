@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: a675fb3c4512eb449814de9d1d49985f
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Shaders/ShaderLibrary/ShaderGraph/ASPGraphCommon.hlsl
+  uploadId: 813382

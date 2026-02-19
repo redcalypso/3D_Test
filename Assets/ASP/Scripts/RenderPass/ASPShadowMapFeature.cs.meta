@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: cb765924ae3c43e59c3cc9a4bdcd145d
+timeCreated: 1705304624
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Scripts/RenderPass/ASPShadowMapFeature.cs
+  uploadId: 813382

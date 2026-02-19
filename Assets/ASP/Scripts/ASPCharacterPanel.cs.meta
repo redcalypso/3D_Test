@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 4d1c549d247b7f0419a3188b7b78bda4
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Scripts/ASPCharacterPanel.cs
+  uploadId: 813382

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: e59310f57715ea140befc8de70f78deb
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Models/classroom/Materials/Classroom/CeilingLampLight.mat
+  uploadId: 813382

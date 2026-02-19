@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 485907709de984b4896c60cc3dd8e23b
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Shaders/SRP/LensFlareScreenSpaceCommon.hlsl
+  uploadId: 813382

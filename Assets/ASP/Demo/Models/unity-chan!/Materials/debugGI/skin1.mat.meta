@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 7b8f406c1054db544822aa37ed2295c5
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Models/unity-chan!/Materials/debugGI/skin1.mat
+  uploadId: 813382

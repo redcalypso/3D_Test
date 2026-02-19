@@ -1,0 +1,10 @@
+fileFormatVersion: 2
+guid: 823d844931fc4a6d9d72865b0653769f
+timeCreated: 1706721388
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Shaders/URPUnlitShaderBasic.shader
+  uploadId: 813382

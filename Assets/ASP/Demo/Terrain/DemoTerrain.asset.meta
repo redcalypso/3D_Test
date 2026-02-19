@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 71ef65c43f361894ea0f29549cee6c67
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 15600000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Terrain/DemoTerrain.asset
+  uploadId: 813382

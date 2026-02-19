@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 40fcfd1d30296b84d9ce6a979c6fbe1f
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Models/classroom/Materials/Classroom/DustbinWireframe.mat
+  uploadId: 813382

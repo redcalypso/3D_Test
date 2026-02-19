@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: b09ee7f387cb15f45a6076b0355f47c3
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Models/hayakawaAoi/Materials/PBR/Hair.mat
+  uploadId: 813382

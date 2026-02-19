@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: f30c41a9353148858fee9a106d8fefb4
+timeCreated: 1725012460
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Shaders/SRP/Common/LitDepthOnlyPassKeywords.hlsl
+  uploadId: 813382

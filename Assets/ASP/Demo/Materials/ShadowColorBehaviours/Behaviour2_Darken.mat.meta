@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 02a00eb8e380e3548af5a276852b6326
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Materials/ShadowColorBehaviours/Behaviour2_Darken.mat
+  uploadId: 813382

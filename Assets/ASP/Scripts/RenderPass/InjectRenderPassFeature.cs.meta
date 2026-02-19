@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 17f0915121d748dd8bb905e0bde1a634
+timeCreated: 1705044809
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Scripts/RenderPass/InjectRenderPassFeature.cs
+  uploadId: 813382

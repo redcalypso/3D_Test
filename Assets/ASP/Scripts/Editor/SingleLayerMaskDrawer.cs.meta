@@ -1,0 +1,10 @@
+﻿fileFormatVersion: 2
+guid: 48dd797e9d9c45ef88b872fc34160925
+timeCreated: 1708860512
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Scripts/Editor/SingleLayerMaskDrawer.cs
+  uploadId: 813382

@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 98ad70357ecd6134dbac80aef9c63f6f
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Scripts/Editor/ShaderGUI/Test/SampleKeyword.shader
+  uploadId: 813382

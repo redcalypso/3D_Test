@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 2b185fd9802603545a2bc6c265ae7359
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Models/hayakawaAoi/Materials/Face_Eye_Mask_M.mat
+  uploadId: 813382

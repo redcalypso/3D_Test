@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: f264e94d33e79fc429a1095b9037e7ae
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 11400000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Scenes/OutlineFadeDemo/OutlneFadeDemoProfile.asset
+  uploadId: 813382

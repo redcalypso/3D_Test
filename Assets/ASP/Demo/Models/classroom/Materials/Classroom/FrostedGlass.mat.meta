@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: de3e8abba832ef04582046f88ce114db
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Models/classroom/Materials/Classroom/FrostedGlass.mat
+  uploadId: 813382

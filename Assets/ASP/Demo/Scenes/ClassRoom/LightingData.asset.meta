@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6e5f14619965f474db477255ec36faa9
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 112000000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Scenes/ClassRoom/LightingData.asset
+  uploadId: 813382

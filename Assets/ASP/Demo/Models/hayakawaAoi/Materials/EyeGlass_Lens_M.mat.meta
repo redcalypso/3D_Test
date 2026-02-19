@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c2138c98442859643aba029eeedfb4fc
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Models/hayakawaAoi/Materials/EyeGlass_Lens_M.mat
+  uploadId: 813382

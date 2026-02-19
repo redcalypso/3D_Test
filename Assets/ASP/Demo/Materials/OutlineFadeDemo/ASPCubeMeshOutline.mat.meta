@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 6445c9a798781cd4bbeffa820c38dcfd
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Materials/OutlineFadeDemo/ASPCubeMeshOutline.mat
+  uploadId: 813382

@@ -1,0 +1,20 @@
+fileFormatVersion: 2
+guid: c2a8586d0e619044dbf2a24d919dd5c1
+timeCreated: 1516872714
+licenseType: Store
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Scripts/SpringBone/Utility/CSVBuilder.cs
+  uploadId: 813382

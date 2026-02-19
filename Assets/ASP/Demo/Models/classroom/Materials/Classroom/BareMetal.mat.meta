@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 0a471273ff6493942b4558ba4958a094
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 281737
+  packageName: Anime Shading Plus
+  packageVersion: 1.3
+  assetPath: Assets/ASP/Demo/Models/classroom/Materials/Classroom/BareMetal.mat
+  uploadId: 813382
