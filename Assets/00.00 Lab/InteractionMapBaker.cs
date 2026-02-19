@@ -1,7 +1,7 @@
 using UnityEngine;
 
 [DisallowMultipleComponent]
-public sealed class InteractionMapBakerInteractionMapBaker : MonoBehaviour
+public sealed class InteractionMapBaker : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private Transform _target;              // Player transform
@@ -9,7 +9,7 @@ public sealed class InteractionMapBakerInteractionMapBaker : MonoBehaviour
     [SerializeField] private RenderTexture _interactionRT;    // RT_Interaction
 
     [Header("Camera Follow")]
-    [SerializeField] private float _cameraHeight = 50f;       // ¾À¿¡ ¸Â°Ô Á¶Àý
+    [SerializeField] private float _cameraHeight = 50f;       // ï¿½ï¿½ï¿½ï¿½ ï¿½Â°ï¿½ ï¿½ï¿½ï¿½ï¿½
     [SerializeField] private bool _useLateUpdate = true;
 
     [Header("Shader Globals")]
@@ -32,9 +32,14 @@ public sealed class InteractionMapBakerInteractionMapBaker : MonoBehaviour
         _rtId = Shader.PropertyToID(_rtGlobalName);
         _camDataId = Shader.PropertyToID(_camDataGlobalName);
 
-        // Ã³À½ ÇÑ ¹ø µî·Ï (RT°¡ ¹Ù²ð ¼ö ÀÖÀ¸¸é Tick¿¡¼­µµ °è¼Ó µî·ÏÇØµµ µÊ)
         if (_interactionRT != null)
             Shader.SetGlobalTexture(_rtId, _interactionRT);
+
+        _interactionCamera.orthographic = true;
+        _interactionCamera.transform.rotation = Quaternion.Euler(90f, 0f, 0f);
+
+        _interactionCamera.clearFlags = CameraClearFlags.SolidColor;
+        _interactionCamera.backgroundColor = new Color(0.735f, 0.735f, 0f, 0f);
     }
 
     private void Update()
@@ -52,27 +57,23 @@ public sealed class InteractionMapBakerInteractionMapBaker : MonoBehaviour
         if (_target == null || _interactionCamera == null)
             return;
 
-        // Ortho Ä«¸Þ¶ó ±âÁØ ¿ùµå Ä¿¹ö Å©±â
         float orthoSize = _interactionCamera.orthographicSize;
         float worldSize = orthoSize * 2f;
 
-        // RT ÇØ»óµµ(±âº» 256)
         int rtRes = (_interactionRT != null) ? _interactionRT.width : 256;
         float pixelSize = worldSize / Mathf.Max(1, rtRes);
 
         Vector3 t = _target.position;
 
-        // ÇÙ½É: ÇÈ¼¿ ½º³À (Shimmer/Jitter ¹æÁö)
         float snapX = Mathf.Round(t.x / pixelSize) * pixelSize;
         float snapZ = Mathf.Round(t.z / pixelSize) * pixelSize;
 
-        // Ä«¸Þ¶ó À§Ä¡ ¼¼ÆÃ (Y´Â °íÁ¤)
         _interactionCamera.transform.position = new Vector3(snapX, _cameraHeight, snapZ);
 
-        // ¼ÎÀÌ´õ ±Û·Î¹ú µî·Ï
         if (_interactionRT != null)
             Shader.SetGlobalTexture(_rtId, _interactionRT);
 
         Shader.SetGlobalVector(_camDataId, new Vector4(snapX, snapZ, orthoSize, worldSize));
+        Debug.Log($"_InteractionCamData = {snapX},{snapZ},{orthoSize},{worldSize}");
     }
 }
