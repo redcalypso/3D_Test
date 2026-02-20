@@ -75,5 +75,7 @@ public sealed class InteractionMapBaker : MonoBehaviour
 
         Shader.SetGlobalVector(_camDataId, new Vector4(snapX, snapZ, orthoSize, worldSize));
         Debug.Log($"_InteractionCamData = {snapX},{snapZ},{orthoSize},{worldSize}");
+
+        Shader.SetGlobalVector("_CamRightWS", _interactionCamera.transform.right);
     }
 }
