@@ -187,7 +187,7 @@ MonoBehaviour:
   - {fileID: 6416302070336371891, guid: 29827d0b30b64414aa87aa8184630565, type: 3}
   sharedMaterial: {fileID: 2100000, guid: 91438c48571627242845e84ac1fcbe1c, type: 2}
   _pressGPU: {fileID: 975627645}
-  _pressColorWeight: 0.6
+  _pressColorWeight: 0.204
   renderOnlyGameCamera: 0
 --- !u!4 &801417466
 Transform:

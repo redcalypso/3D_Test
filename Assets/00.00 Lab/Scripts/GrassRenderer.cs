@@ -13,19 +13,27 @@ public sealed class GrassRenderer : MonoBehaviour
     [Header("Interaction / GPU Press")]
     [SerializeField] private GrassPressGPU _pressGPU;
     [SerializeField, Range(0f, 1f)] private float _pressColorWeight = 0.35f;
+    private float _pressColorWeightClamped = 0.35f;
 
     [Header("Render Options")]
     [SerializeField] private bool renderOnlyGameCamera = false;
 
     private readonly List<Matrix4x4>[] _lists = new List<Matrix4x4>[16];
     private readonly Matrix4x4[] _tmp = new Matrix4x4[1023];
+    private CellRecord[] _sortedCellsScratch;
 
     private MaterialPropertyBlock _mpb;
     private Vector4[] _instancePosScale;
 
-    // 캐시: "순서"가 바뀌었는지 감지하기 위한 해시
+    // Press 버퍼 동기화 캐시(마지막으로 동기화된 인스턴스 순서/개수)
     private int _cachedOrderHash;
     private int _cachedTotalCount;
+    // 렌더 리스트 캐시(현재 빌드된 인스턴스 순서/개수)
+    private int _currentOrderHash;
+    private int _currentTotalCount;
+    private int _currentGrassSettingsHash;
+    private int _currentCellCount = -1;
+    private bool _listsDirty = true;
 
     // Dummy press buffer (press = 0)
     private static ComputeBuffer s_dummyPressBuffer;
@@ -34,15 +42,33 @@ public sealed class GrassRenderer : MonoBehaviour
     private static readonly int IdInstancePressCount = Shader.PropertyToID("_InstancePressCount");
     private static readonly int IdBaseInstanceIndex = Shader.PropertyToID("_BaseInstanceIndex");
     private static readonly int IdPressColorWeight = Shader.PropertyToID("_PressColorWeight");
+    private static readonly IComparer<CellRecord> s_cellRecordComparer = Comparer<CellRecord>.Create((a, b) =>
+    {
+        int va = a.variant;
+        int vb = b.variant;
+        if (va != vb) return va.CompareTo(vb);
+
+        int cxa = a.cx;
+        int cxb = b.cx;
+        if (cxa != cxb) return cxa.CompareTo(cxb);
+
+        int cya = a.cy;
+        int cyb = b.cy;
+        return cya.CompareTo(cyb);
+    });
 
     private void OnEnable()
     {
+        SyncPressColorWeight();
+        _listsDirty = true;
+
         for (int i = 0; i < _lists.Length; i++)
             _lists[i] ??= new List<Matrix4x4>(1024);
 
         _mpb ??= new MaterialPropertyBlock();
 
         EnsureDummyPressBuffer();
+        RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
         RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
     }
 
@@ -50,6 +76,7 @@ public sealed class GrassRenderer : MonoBehaviour
     {
         RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
         _pressGPU?.SetInstances(null);
+        ReleaseManagedCaches();
         ReleaseDummyPressBuffer();
     }
 
@@ -57,12 +84,24 @@ public sealed class GrassRenderer : MonoBehaviour
     {
         RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
         _pressGPU?.SetInstances(null);
+        ReleaseManagedCaches();
         ReleaseDummyPressBuffer();
     }
 
     private void OnBeginCameraRendering(ScriptableRenderContext ctx, Camera cam)
     {
         RenderForCamera(cam);
+    }
+
+    private void OnValidate()
+    {
+        SyncPressColorWeight();
+        _listsDirty = true;
+    }
+
+    private void SyncPressColorWeight()
+    {
+        _pressColorWeightClamped = Mathf.Clamp01(_pressColorWeight);
     }
 
     private void RenderForCamera(Camera cam)
@@ -81,8 +120,10 @@ public sealed class GrassRenderer : MonoBehaviour
 
         _mpb ??= new MaterialPropertyBlock();
 
-        // 1) 리스트를 매번 "결정론적 순서"로 빌드
-        BuildListsDeterministic(out int orderHash, out int totalCount);
+        // 1) 플레이 중에는 변경 시에만 리스트 재빌드
+        EnsureListsUpToDate();
+        int orderHash = _currentOrderHash;
+        int totalCount = _currentTotalCount;
 
         // 2) 순서/개수가 바뀌면 PressBuffer 인스턴스 순서도 동일하게 재빌드
         if (_pressGPU != null && (orderHash != _cachedOrderHash || totalCount != _cachedTotalCount))
@@ -129,7 +170,7 @@ public sealed class GrassRenderer : MonoBehaviour
                 _mpb.SetBuffer(IdInstancePress01, pressBuffer);
                 _mpb.SetFloat(IdInstancePressCount, pressCount);
                 _mpb.SetFloat(IdBaseInstanceIndex, baseIndex + offset);
-                _mpb.SetFloat(IdPressColorWeight, Mathf.Clamp01(_pressColorWeight));
+                _mpb.SetFloat(IdPressColorWeight, _pressColorWeightClamped);
 
                 Graphics.DrawMeshInstanced(mesh, 0, sharedMaterial, _tmp, count, _mpb);
 
@@ -152,23 +193,12 @@ public sealed class GrassRenderer : MonoBehaviour
         var src = grass.cells;
         int n = src != null ? src.Count : 0;
 
-        CellRecord[] sorted = new CellRecord[n];
-        for (int i = 0; i < n; i++) sorted[i] = src[i];
+        if (_sortedCellsScratch == null || _sortedCellsScratch.Length < n)
+            _sortedCellsScratch = new CellRecord[n];
 
-        Array.Sort(sorted, (a, b) =>
-        {
-            int va = a.variant;
-            int vb = b.variant;
-            if (va != vb) return va.CompareTo(vb);
+        for (int i = 0; i < n; i++) _sortedCellsScratch[i] = src[i];
 
-            int cxa = a.cx;
-            int cxb = b.cx;
-            if (cxa != cxb) return cxa.CompareTo(cxb);
-
-            int cya = a.cy;
-            int cyb = b.cy;
-            return cya.CompareTo(cyb);
-        });
+        Array.Sort(_sortedCellsScratch, 0, n, s_cellRecordComparer);
 
         unchecked
         {
@@ -179,7 +209,7 @@ public sealed class GrassRenderer : MonoBehaviour
 
             for (int i = 0; i < n; i++)
             {
-                var rec = sorted[i];
+                var rec = _sortedCellsScratch[i];
 
                 uint seed = GrassHash.MakeSeed(grass.globalSeed, rec.cx, rec.cy);
                 Vector2 jitter = GrassHash.Jitter(seed, grass.cellSize * 0.35f);
@@ -214,8 +244,17 @@ public sealed class GrassRenderer : MonoBehaviour
     private void RebuildPressInstances(int totalCount)
     {
         if (_pressGPU == null) return;
+        if (totalCount <= 0)
+        {
+            _instancePosScale = null;
+            _pressGPU.SetInstances(null);
+            return;
+        }
 
-        var posScaleList = new List<Vector4>(totalCount);
+        if (_instancePosScale == null || _instancePosScale.Length != totalCount)
+            _instancePosScale = new Vector4[totalCount];
+
+        int write = 0;
 
         int vCount = Mathf.Min(grass.variationCount, _lists.Length);
         for (int v = 0; v < vCount; v++)
@@ -226,12 +265,101 @@ public sealed class GrassRenderer : MonoBehaviour
             for (int i = 0; i < list.Count; i++)
             {
                 Vector3 pos = list[i].GetColumn(3);
-                posScaleList.Add(new Vector4(pos.x, pos.y, pos.z, 1f));
+                _instancePosScale[write++] = new Vector4(pos.x, pos.y, pos.z, 1f);
             }
         }
 
-        _instancePosScale = posScaleList.ToArray();
+        if (write != totalCount)
+        {
+            Array.Resize(ref _instancePosScale, write);
+            totalCount = write;
+        }
+
+        if (totalCount <= 0)
+        {
+            _pressGPU.SetInstances(null);
+            return;
+        }
+
         _pressGPU.SetInstances(_instancePosScale);
+    }
+
+    private void EnsureListsUpToDate()
+    {
+        if (!NeedsListRebuild())
+            return;
+
+        BuildListsDeterministic(out _currentOrderHash, out _currentTotalCount);
+
+        _currentGrassSettingsHash = ComputeGrassSettingsHash();
+        _currentCellCount = grass != null && grass.cells != null ? grass.cells.Count : 0;
+        _listsDirty = false;
+        transform.hasChanged = false;
+    }
+
+    private bool NeedsListRebuild()
+    {
+        if (_listsDirty)
+            return true;
+
+        if (grass == null)
+            return false;
+
+        // 에디터(비플레이)에서는 브러시 편집 즉시 반영을 위해 매 프레임 갱신
+        if (!Application.isPlaying)
+            return true;
+
+        if (transform.hasChanged)
+            return true;
+
+        int settingsHash = ComputeGrassSettingsHash();
+        if (settingsHash != _currentGrassSettingsHash)
+            return true;
+
+        int cellCount = grass.cells != null ? grass.cells.Count : 0;
+        return cellCount != _currentCellCount;
+    }
+
+    private int ComputeGrassSettingsHash()
+    {
+        if (grass == null)
+            return 0;
+
+        unchecked
+        {
+            int h = 17;
+            h = h * 31 + grass.variationCount;
+            h = h * 31 + grass.globalSeed.GetHashCode();
+            h = h * 31 + grass.chunkSize.GetHashCode();
+            h = h * 31 + grass.cellSize.GetHashCode();
+            h = h * 31 + grass.scaleMin.GetHashCode();
+            h = h * 31 + grass.scaleMax.GetHashCode();
+            return h;
+        }
+    }
+
+    private void ReleaseManagedCaches()
+    {
+        _instancePosScale = null;
+        _sortedCellsScratch = null;
+        _cachedOrderHash = 0;
+        _cachedTotalCount = 0;
+        _currentOrderHash = 0;
+        _currentTotalCount = 0;
+        _currentGrassSettingsHash = 0;
+        _currentCellCount = -1;
+        _listsDirty = true;
+        _mpb = null;
+
+        for (int i = 0; i < _lists.Length; i++)
+        {
+            var list = _lists[i];
+            if (list == null)
+                continue;
+
+            list.Clear();
+            list.TrimExcess();
+        }
     }
 
     private static void EnsureDummyPressBuffer()
