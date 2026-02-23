@@ -15,14 +15,13 @@ public sealed class GrassRenderer : MonoBehaviour
     [Header("Interaction / GPU Press")]
     [SerializeField] private GrassPressGPU _pressGPU;
 
-    // GPU Press / 색상용
     private MaterialPropertyBlock _mpb;
     private Vector4[] _instancePosScale;
     private bool _pressInitialized;
+    private int _lastPressLayoutHash;
 
-    // 모든 GrassRenderer가 공유할 더미 버퍼 (press = 0)
+    // Fallback press buffer (press = 0) shared by all renderers.
     private static ComputeBuffer s_dummyPressBuffer;
-
 
     private void OnEnable()
     {
@@ -69,13 +68,11 @@ public sealed class GrassRenderer : MonoBehaviour
         for (int i = 0; i < _lists.Length; i++)
             _lists[i].Clear();
 
-        // ====== 기존 셀 → 행렬 빌드 로직 ======
-
         float half = grass.chunkSize * 0.5f;
+        int layoutHash = 17;
 
         foreach (var rec in grass.cells)
         {
-            // 셀 해시 기반 지터 (원래 코드 그대로)
             uint seed = GrassHash.MakeSeed(grass.globalSeed, rec.cx, rec.cy);
             Vector2 jitter = GrassHash.Jitter(seed, grass.cellSize * 0.35f);
 
@@ -91,13 +88,19 @@ public sealed class GrassRenderer : MonoBehaviour
             Vector3 scl = Vector3.one * scale;
 
             _lists[rec.variant].Add(Matrix4x4.TRS(worldPos, rot, scl));
+
+            unchecked
+            {
+                layoutHash = (layoutHash * 31) + rec.variant;
+                layoutHash = (layoutHash * 31) + worldPos.GetHashCode();
+            }
         }
 
-        // ====== 여기서부터 GPU Press 연동 ======
+        int totalInstanceCount = 0;
+        for (int vv = 0; vv < grass.variationCount; vv++) totalInstanceCount += _lists[vv].Count;
 
-        // 1) 첫 프레임에만 posScale → GrassPressGPU로 보내기
-        EnsurePressSetup();          // PressGPU 인스턴스 데이터 세팅
-        EnsureDummyPressBuffer();    // 더미 버퍼는 항상 준비
+        EnsurePressSetup(layoutHash, totalInstanceCount);
+        EnsureDummyPressBuffer();
 
         ComputeBuffer pressBuffer =
             (_pressGPU != null && _pressGPU.PressBuffer != null)
@@ -105,12 +108,6 @@ public sealed class GrassRenderer : MonoBehaviour
             : s_dummyPressBuffer;
 
         int baseIndex = 0;
-
-        // total instances in this chunk (should match press buffer instance count)
-        int totalInstanceCount = 0;
-        for (int vv = 0; vv < grass.variationCount; vv++) totalInstanceCount += _lists[vv].Count;
-
-        int globalBatchIndex = 0;
 
         for (int v = 0; v < grass.variationCount; v++)
         {
@@ -144,25 +141,28 @@ public sealed class GrassRenderer : MonoBehaviour
                     _tmp, count, _mpb
                 );
 
-                globalBatchIndex++;
-
                 offset += count;
             }
+
             baseIndex += list.Count;
         }
     }
 
-    // GrassPressGPU와 posScale 초기화
-    private void EnsurePressSetup()
+    private void EnsurePressSetup(int layoutHash, int totalInstanceCount)
     {
-        if (_pressInitialized || _pressGPU == null || grass == null)
+        if (_pressGPU == null || grass == null)
+            return;
+
+        bool layoutChanged = !_pressInitialized || _lastPressLayoutHash != layoutHash;
+        bool countChanged = _pressGPU.InstanceCount != totalInstanceCount;
+
+        if (!layoutChanged && !countChanged)
             return;
 
         _mpb ??= new MaterialPropertyBlock();
 
-        var posScaleList = new List<Vector4>();
+        var posScaleList = new List<Vector4>(totalInstanceCount);
 
-        // _lists 내용(셀별 행렬) 기반으로 월드 위치만 추출
         for (int v = 0; v < grass.variationCount && v < _lists.Length; v++)
         {
             var list = _lists[v];
@@ -171,9 +171,8 @@ public sealed class GrassRenderer : MonoBehaviour
             for (int i = 0; i < list.Count; i++)
             {
                 Matrix4x4 m = list[i];
-                Vector3 pos = m.GetColumn(3); // TRS의 translation 컬럼
+                Vector3 pos = m.GetColumn(3);
 
-                // scale은 지금 Press 계산에는 안 쓰이니까 1f로 둬도 됨
                 posScaleList.Add(new Vector4(pos.x, pos.y, pos.z, 1f));
             }
         }
@@ -181,6 +180,7 @@ public sealed class GrassRenderer : MonoBehaviour
         _instancePosScale = posScaleList.ToArray();
         _pressGPU.SetInstances(_instancePosScale);
         _pressInitialized = true;
+        _lastPressLayoutHash = layoutHash;
     }
 
     private static void EnsureDummyPressBuffer()
