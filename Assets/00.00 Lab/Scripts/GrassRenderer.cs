@@ -15,12 +15,12 @@ public sealed class GrassRenderer : MonoBehaviour
     [Header("Interaction / GPU Press")]
     [SerializeField] private GrassPressGPU _pressGPU;
 
-    // GPU Press / »ö»ó¿ë
+    private int _lastPressUploadFrame = -1;
     private MaterialPropertyBlock _mpb;
     private Vector4[] _instancePosScale;
     private bool _pressInitialized;
 
-    // ¸ğµç GrassRenderer°¡ °øÀ¯ÇÒ ´õ¹Ì ¹öÆÛ (press = 0)
+    // ëª¨ë“  GrassRendererê°€ ê³µìœ í•  ë”ë¯¸ ë²„í¼ (press = 0)
     private static ComputeBuffer s_dummyPressBuffer;
 
 
@@ -69,13 +69,13 @@ public sealed class GrassRenderer : MonoBehaviour
         for (int i = 0; i < _lists.Length; i++)
             _lists[i].Clear();
 
-        // ====== ±âÁ¸ ¼¿ ¡æ Çà·Ä ºôµå ·ÎÁ÷ ======
+        // ====== ê¸°ì¡´ ì…€ â†’ í–‰ë ¬ ë¹Œë“œ ë¡œì§ ======
 
         float half = grass.chunkSize * 0.5f;
 
         foreach (var rec in grass.cells)
         {
-            // ¼¿ ÇØ½Ã ±â¹İ ÁöÅÍ (¿ø·¡ ÄÚµå ±×´ë·Î)
+            // ì…€ í•´ì‹œ ê¸°ë°˜ ì§€í„° (ì›ë˜ ì½”ë“œ ê·¸ëŒ€ë¡œ)
             uint seed = GrassHash.MakeSeed(grass.globalSeed, rec.cx, rec.cy);
             Vector2 jitter = GrassHash.Jitter(seed, grass.cellSize * 0.35f);
 
@@ -93,11 +93,11 @@ public sealed class GrassRenderer : MonoBehaviour
             _lists[rec.variant].Add(Matrix4x4.TRS(worldPos, rot, scl));
         }
 
-        // ====== ¿©±â¼­ºÎÅÍ GPU Press ¿¬µ¿ ======
+        // ====== ì—¬ê¸°ì„œë¶€í„° GPU Press ì—°ë™ ======
 
-        // 1) Ã¹ ÇÁ·¹ÀÓ¿¡¸¸ posScale ¡æ GrassPressGPU·Î º¸³»±â
-        EnsurePressSetup();          // PressGPU ÀÎ½ºÅÏ½º µ¥ÀÌÅÍ ¼¼ÆÃ
-        EnsureDummyPressBuffer();    // ´õ¹Ì ¹öÆÛ´Â Ç×»ó ÁØºñ
+        // 1) ì²« í”„ë ˆì„ì—ë§Œ posScale â†’ GrassPressGPUë¡œ ë³´ë‚´ê¸°
+        EnsurePressSetup();          // PressGPU ì¸ìŠ¤í„´ìŠ¤ ë°ì´í„° ì„¸íŒ…
+        EnsureDummyPressBuffer();    // ë”ë¯¸ ë²„í¼ëŠ” í•­ìƒ ì¤€ë¹„
 
         ComputeBuffer pressBuffer =
             (_pressGPU != null && _pressGPU.PressBuffer != null)
@@ -152,8 +152,13 @@ public sealed class GrassRenderer : MonoBehaviour
         }
     }
 
-    // GrassPressGPU¿Í posScale ÃÊ±âÈ­
-    private void EnsurePressSetup()
+        if (_pressGPU == null || grass == null)
+        // beginCameraRendering may run for multiple cameras per frame.
+        // Upload once per frame so buffer order stays synced with draw order.
+        if (_lastPressUploadFrame == Time.frameCount)
+            return;
+        _lastPressUploadFrame = Time.frameCount;
+
     {
         if (_pressInitialized || _pressGPU == null || grass == null)
             return;
@@ -162,7 +167,7 @@ public sealed class GrassRenderer : MonoBehaviour
 
         var posScaleList = new List<Vector4>();
 
-        // _lists ³»¿ë(¼¿º° Çà·Ä) ±â¹İÀ¸·Î ¿ùµå À§Ä¡¸¸ ÃßÃâ
+        // _lists ë‚´ìš©(ì…€ë³„ í–‰ë ¬) ê¸°ë°˜ìœ¼ë¡œ ì›”ë“œ ìœ„ì¹˜ë§Œ ì¶”ì¶œ
         for (int v = 0; v < grass.variationCount && v < _lists.Length; v++)
         {
             var list = _lists[v];
@@ -171,9 +176,9 @@ public sealed class GrassRenderer : MonoBehaviour
             for (int i = 0; i < list.Count; i++)
             {
                 Matrix4x4 m = list[i];
-                Vector3 pos = m.GetColumn(3); // TRSÀÇ translation ÄÃ·³
+                Vector3 pos = m.GetColumn(3); // TRSì˜ translation ì»¬ëŸ¼
 
-                // scaleÀº Áö±İ Press °è»ê¿¡´Â ¾È ¾²ÀÌ´Ï±î 1f·Î µÖµµ µÊ
+                // scaleì€ ì§€ê¸ˆ Press ê³„ì‚°ì—ëŠ” ì•ˆ ì“°ì´ë‹ˆê¹Œ 1fë¡œ ë‘¬ë„ ë¨
                 posScaleList.Add(new Vector4(pos.x, pos.y, pos.z, 1f));
             }
         }
