@@ -54,8 +54,6 @@ void CSMain(uint3 id : SV_DispatchThreadID)
         press = 0.0;
     }
     
-    press = frac(index / 64.0);
-
     _InstancePress01[index] = press;
 }
 

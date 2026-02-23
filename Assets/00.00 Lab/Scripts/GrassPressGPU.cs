@@ -1,4 +1,7 @@
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public sealed class GrassPressGPU : MonoBehaviour
 {
@@ -14,9 +17,7 @@ public sealed class GrassPressGPU : MonoBehaviour
     private ComputeBuffer _pressBuffer;
     private int _kernel;
     private int _instanceCount;
-
-    private static readonly int IdKernelCSMain = Shader.PropertyToID("CSMain");
-    private static readonly int IdKernelClear = Shader.PropertyToID("Clear");
+    private bool _kernelReady;
 
     private static readonly int IdInstancePosScale = Shader.PropertyToID("_InstancePosScale");
     private static readonly int IdInstancePress01 = Shader.PropertyToID("_InstancePress01");
@@ -26,26 +27,58 @@ public sealed class GrassPressGPU : MonoBehaviour
     private static readonly int IdInteractionViewProj = Shader.PropertyToID("_InteractionViewProj");
     private static readonly int IdInteractionCamData = Shader.PropertyToID("_InteractionCamData");
 
+    private void OnEnable()
+    {
+        EnsureKernel();
+#if UNITY_EDITOR
+        AssemblyReloadEvents.beforeAssemblyReload -= HandleBeforeAssemblyReload;
+        AssemblyReloadEvents.beforeAssemblyReload += HandleBeforeAssemblyReload;
+        EditorApplication.playModeStateChanged -= HandlePlayModeStateChanged;
+        EditorApplication.playModeStateChanged += HandlePlayModeStateChanged;
+#endif
+    }
+
     private void Awake()
     {
-        if (_compute == null)
-        {
-            Debug.LogError("GrassPressGPU: ComputeShader not assigned.");
-            enabled = false;
-            return;
-        }
-
-        _kernel = _compute.FindKernel("CSMain");
+        EnsureKernel();
     }
 
     private void OnDisable()
     {
         ReleaseBuffers();
+#if UNITY_EDITOR
+        AssemblyReloadEvents.beforeAssemblyReload -= HandleBeforeAssemblyReload;
+        EditorApplication.playModeStateChanged -= HandlePlayModeStateChanged;
+#endif
     }
 
     private void OnDestroy()
     {
         ReleaseBuffers();
+#if UNITY_EDITOR
+        AssemblyReloadEvents.beforeAssemblyReload -= HandleBeforeAssemblyReload;
+        EditorApplication.playModeStateChanged -= HandlePlayModeStateChanged;
+#endif
+    }
+
+    private void OnApplicationQuit()
+    {
+        ReleaseBuffers();
+    }
+
+    private bool EnsureKernel()
+    {
+        if (_compute == null)
+        {
+            Debug.LogError("GrassPressGPU: ComputeShader not assigned.");
+            _kernelReady = false;
+            enabled = false;
+            return false;
+        }
+
+        _kernel = _compute.FindKernel("CSMain");
+        _kernelReady = true;
+        return true;
     }
 
     private void ReleaseBuffers()
@@ -63,18 +96,32 @@ public sealed class GrassPressGPU : MonoBehaviour
     {
         _instanceCount = posScale != null ? posScale.Length : 0;
 
-        _posScaleBuffer?.Dispose();
-        _pressBuffer?.Dispose();
-
         if (_instanceCount <= 0)
         {
-            _posScaleBuffer = null;
-            _pressBuffer = null;
+            ReleaseBuffers();
             return;
         }
 
-        _posScaleBuffer = new ComputeBuffer(_instanceCount, sizeof(float) * 4);
-        _pressBuffer = new ComputeBuffer(_instanceCount, sizeof(float));
+        if (!_kernelReady && !EnsureKernel())
+        {
+            ReleaseBuffers();
+            return;
+        }
+
+        bool needRecreate =
+            _posScaleBuffer == null ||
+            _pressBuffer == null ||
+            _posScaleBuffer.count != _instanceCount ||
+            _pressBuffer.count != _instanceCount;
+
+        if (needRecreate)
+        {
+            _posScaleBuffer?.Dispose();
+            _pressBuffer?.Dispose();
+
+            _posScaleBuffer = new ComputeBuffer(_instanceCount, sizeof(float) * 4);
+            _pressBuffer = new ComputeBuffer(_instanceCount, sizeof(float));
+        }
 
         _posScaleBuffer.SetData(posScale);
 
@@ -93,11 +140,12 @@ public sealed class GrassPressGPU : MonoBehaviour
             return;
         }
 
-        // CamData는 Baker가 글로벌로 박아둔 값 사용
+        if (!_kernelReady && !EnsureKernel())
+            return;
+
         Vector4 camData = Shader.GetGlobalVector("_InteractionCamData");
         _compute.SetVector(IdInteractionCamData, camData);
 
-        // VP 계산
         Matrix4x4 view = _interactionCam.worldToCameraMatrix;
         Matrix4x4 proj = _interactionCam.projectionMatrix;
         Matrix4x4 gpuProj = GL.GetGPUProjectionMatrix(proj, true);
@@ -105,12 +153,22 @@ public sealed class GrassPressGPU : MonoBehaviour
 
         _compute.SetMatrix(IdInteractionViewProj, vp);
         _compute.SetTexture(_kernel, IdInteractionRT, _interactionRT);
-
-        // IMPORTANT: uint로 통일 (음수 방지)
-        uint countU = (uint)Mathf.Max(0, _instanceCount);
-        _compute.SetInt(IdInstanceCount, (int)countU);
+        _compute.SetInt(IdInstanceCount, _instanceCount);
 
         int groups = (_instanceCount + 63) / 64;
         _compute.Dispatch(_kernel, groups, 1, 1);
     }
+
+#if UNITY_EDITOR
+    private void HandleBeforeAssemblyReload()
+    {
+        ReleaseBuffers();
+    }
+
+    private void HandlePlayModeStateChanged(PlayModeStateChange state)
+    {
+        if (state == PlayModeStateChange.ExitingPlayMode || state == PlayModeStateChange.ExitingEditMode)
+            ReleaseBuffers();
+    }
+#endif
 }

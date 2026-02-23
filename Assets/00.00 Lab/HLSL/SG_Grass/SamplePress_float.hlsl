@@ -1,24 +1,21 @@
-StructuredBuffer<float> _InstancePress01;
-
-// ShaderGraph에서 Vector1(=float)로 들어오는 걸로 통일
-float _InstancePressCount;
-float _BaseInstanceIndex;
-
 void SamplePress_float(float instanceID, out float press)
 {
-    // instanceID는 보통 정수로 들어오지만 float이니 안전하게 처리
-    uint inst = (uint)round(instanceID);
-    uint baseI = (uint)round(_BaseInstanceIndex);
-    uint count = (uint)round(_InstancePressCount);
+    // Keep signature for Shader Graph, but use world-space RT sampling for stable color press.
 
-    uint index = baseI + inst;
+    float4x4 objectToWorld = GetObjectToWorldMatrix();
+    float3 worldPos = mul(objectToWorld, float4(0.0, 0.0, 0.0, 1.0)).xyz;
 
-    if (index >= count)
+    float worldSize = max(_InteractionCamData.w, 1e-5);
+    float2 minXZ = _InteractionCamData.xy - worldSize * 0.5;
+    float2 uv = (worldPos.xz - minXZ) / worldSize;
+
+    if (any(uv < 0.0) || any(uv > 1.0))
     {
         press = 0.0;
         return;
     }
 
-    float v = _InstancePress01[index];
-    press = (v < 0.0 || v > 1.0 || v != v) ? 0.0 : v;
+    float4 c = SAMPLE_TEXTURE2D_LOD(_InteractionRT, sampler_InteractionRT, uv, 0);
+    float v = saturate(c.b * c.a);
+    press = (v != v) ? 0.0 : v;
 }

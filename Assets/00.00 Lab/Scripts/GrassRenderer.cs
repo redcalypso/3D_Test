@@ -12,6 +12,7 @@ public sealed class GrassRenderer : MonoBehaviour
 
     [Header("Interaction / GPU Press")]
     [SerializeField] private GrassPressGPU _pressGPU;
+    [SerializeField, Range(0f, 1f)] private float _pressColorWeight = 0.35f;
 
     [Header("Render Options")]
     [SerializeField] private bool renderOnlyGameCamera = false;
@@ -32,6 +33,7 @@ public sealed class GrassRenderer : MonoBehaviour
     private static readonly int IdInstancePress01 = Shader.PropertyToID("_InstancePress01");
     private static readonly int IdInstancePressCount = Shader.PropertyToID("_InstancePressCount");
     private static readonly int IdBaseInstanceIndex = Shader.PropertyToID("_BaseInstanceIndex");
+    private static readonly int IdPressColorWeight = Shader.PropertyToID("_PressColorWeight");
 
     private void OnEnable()
     {
@@ -47,12 +49,14 @@ public sealed class GrassRenderer : MonoBehaviour
     private void OnDisable()
     {
         RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
+        _pressGPU?.SetInstances(null);
         ReleaseDummyPressBuffer();
     }
 
     private void OnDestroy()
     {
         RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
+        _pressGPU?.SetInstances(null);
         ReleaseDummyPressBuffer();
     }
 
@@ -125,6 +129,7 @@ public sealed class GrassRenderer : MonoBehaviour
                 _mpb.SetBuffer(IdInstancePress01, pressBuffer);
                 _mpb.SetFloat(IdInstancePressCount, pressCount);
                 _mpb.SetFloat(IdBaseInstanceIndex, baseIndex + offset);
+                _mpb.SetFloat(IdPressColorWeight, Mathf.Clamp01(_pressColorWeight));
 
                 Graphics.DrawMeshInstanced(mesh, 0, sharedMaterial, _tmp, count, _mpb);
 
@@ -245,3 +250,5 @@ public sealed class GrassRenderer : MonoBehaviour
         s_dummyPressBuffer = null;
     }
 }
+
+
