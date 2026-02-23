@@ -197,7 +197,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2109714330}
-  - {fileID: 1084073733}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &580529475
@@ -216,9 +215,6 @@ MonoBehaviour:
   variationMeshes:
   - {fileID: 6416302070336371891, guid: 29827d0b30b64414aa87aa8184630565, type: 3}
   sharedMaterial: {fileID: 2100000, guid: 91438c48571627242845e84ac1fcbe1c, type: 2}
-  _pressGPU: {fileID: 1084073732}
-  _debugLogBatchesOnce: 0
-  _debugForceZeroPressOnce: 0
 --- !u!1 &824360477
 GameObject:
   m_ObjectHideFlags: 0
@@ -395,54 +391,6 @@ MonoBehaviour:
   blendDistance: 0
   weight: 1
   sharedProfile: {fileID: 11400000, guid: 10fc4df2da32a41aaa32d77bc913491c, type: 2}
---- !u!1 &1084073731
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1084073733}
-  - component: {fileID: 1084073732}
-  m_Layer: 0
-  m_Name: GrassPressGPU
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &1084073732
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1084073731}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 48827d6084980bb47b720e1a5958cef7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::GrassPressGPU
-  _compute: {fileID: 7200000, guid: 051aea57cfb5783448c6fe0a4698d0fe, type: 3}
-  _interactionCam: {fileID: 1095173387}
-  _interactionRT: {fileID: 8400000, guid: f6c26dfed71eb3246899e30b089a349c, type: 2}
-  _debugDisableCompute: 0
---- !u!4 &1084073733
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1084073731}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 580529474}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1095173383
 GameObject:
   m_ObjectHideFlags: 0
@@ -651,8 +599,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1204249778}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.28051448, y: 0.0038394101, z: -0.0011220747, w: 0.95984155}
-  m_LocalPosition: {x: 0.23688604, y: 6.2252584, z: -10.180187}
+  m_LocalRotation: {x: 0.42261827, y: 0, z: 0, w: 0.9063079}
+  m_LocalPosition: {x: 0, y: 17, z: -16}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -902,7 +850,7 @@ Transform:
   m_GameObject: {fileID: 1946364335}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 1.88, y: 2, z: -2.63}
+  m_LocalPosition: {x: 0.06, y: 2, z: -0.88}
   m_LocalScale: {x: 1.5, y: 1.5, z: 1.5}
   m_ConstrainProportionsScale: 1
   m_Children:
@@ -1019,7 +967,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 3.1057, y: 0.31057, z: 3.1057}
+  m_LocalScale: {x: 10, y: 1, z: 10}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 580529474}

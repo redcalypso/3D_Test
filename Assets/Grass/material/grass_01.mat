@@ -85,6 +85,7 @@ Material:
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 1
     - _AlphaToMask: 1
+    - _BaseInstanceIndex: 0
     - _BendColorWeight: 1
     - _BendToColor: 2
     - _Blend: 0
@@ -106,14 +107,14 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _GrassDepressAmount: 2
+    - _GrassDepressAmount: 1
     - _GrassPitchDeg: 30
     - _GrassPitchStrength: 1
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _Press01: 0
-    - _PressColorWeight: 1
+    - _PressColorWeight: 2
     - _QueueControl: 0
     - _QueueOffset: 0
     - _ReceiveShadows: 1
