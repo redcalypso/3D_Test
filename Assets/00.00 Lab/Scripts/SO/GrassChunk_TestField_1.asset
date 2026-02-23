@@ -23655,3 +23655,51 @@ MonoBehaviour:
     cy: 79
     variant: 6
     scaleByte: 128
+  - cx: 73
+    cy: 36
+    variant: 2
+    scaleByte: 128
+  - cx: 77
+    cy: 38
+    variant: 0
+    scaleByte: 128
+  - cx: 78
+    cy: 38
+    variant: 5
+    scaleByte: 128
+  - cx: 77
+    cy: 39
+    variant: 0
+    scaleByte: 128
+  - cx: 78
+    cy: 39
+    variant: 3
+    scaleByte: 128
+  - cx: 79
+    cy: 39
+    variant: 2
+    scaleByte: 128
+  - cx: 76
+    cy: 41
+    variant: 4
+    scaleByte: 128
+  - cx: 78
+    cy: 42
+    variant: 7
+    scaleByte: 128
+  - cx: 79
+    cy: 42
+    variant: 5
+    scaleByte: 128
+  - cx: 78
+    cy: 43
+    variant: 4
+    scaleByte: 128
+  - cx: 79
+    cy: 36
+    variant: 2
+    scaleByte: 128
+  - cx: 79
+    cy: 41
+    variant: 4
+    scaleByte: 128
