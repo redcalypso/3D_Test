@@ -14,22 +14,41 @@ public sealed class GrassPressGPU : MonoBehaviour
     private ComputeBuffer _pressBuffer;
     private int _kernel;
     private int _instanceCount;
-    private int _lastUpdatedFrame = -1;
 
-    [SerializeField] private bool _debugDisableCompute = false;
+    private static readonly int IdKernelCSMain = Shader.PropertyToID("CSMain");
+    private static readonly int IdKernelClear = Shader.PropertyToID("Clear");
 
-    void Awake()
+    private static readonly int IdInstancePosScale = Shader.PropertyToID("_InstancePosScale");
+    private static readonly int IdInstancePress01 = Shader.PropertyToID("_InstancePress01");
+    private static readonly int IdInstanceCount = Shader.PropertyToID("_InstanceCount");
+
+    private static readonly int IdInteractionRT = Shader.PropertyToID("_InteractionRT");
+    private static readonly int IdInteractionViewProj = Shader.PropertyToID("_InteractionViewProj");
+    private static readonly int IdInteractionCamData = Shader.PropertyToID("_InteractionCamData");
+
+    private void Awake()
     {
         if (_compute == null)
         {
-            Debug.LogError("GrassPressGPU: ComputeShader not assigned");
+            Debug.LogError("GrassPressGPU: ComputeShader not assigned.");
             enabled = false;
             return;
         }
 
         _kernel = _compute.FindKernel("CSMain");
     }
-    void OnDisable()
+
+    private void OnDisable()
+    {
+        ReleaseBuffers();
+    }
+
+    private void OnDestroy()
+    {
+        ReleaseBuffers();
+    }
+
+    private void ReleaseBuffers()
     {
         _posScaleBuffer?.Dispose();
         _posScaleBuffer = null;
@@ -40,61 +59,56 @@ public sealed class GrassPressGPU : MonoBehaviour
         _instanceCount = 0;
     }
 
-    void OnDestroy()
-    {
-        _posScaleBuffer?.Dispose();
-        _posScaleBuffer = null;
-
-        _pressBuffer?.Dispose();
-        _pressBuffer = null;
-
-        _instanceCount = 0;
-    }
-
-    /// <summary>
-    /// GrassRenderer가 인스턴스 월드 위치+스케일 배열을 넘겨주는 함수
-    /// </summary>
     public void SetInstances(Vector4[] posScale)
     {
-        _instanceCount = (posScale != null) ? posScale.Length : 0;
+        _instanceCount = posScale != null ? posScale.Length : 0;
 
         _posScaleBuffer?.Dispose();
         _pressBuffer?.Dispose();
 
-        if (_instanceCount == 0)
+        if (_instanceCount <= 0)
+        {
+            _posScaleBuffer = null;
+            _pressBuffer = null;
             return;
+        }
 
         _posScaleBuffer = new ComputeBuffer(_instanceCount, sizeof(float) * 4);
         _pressBuffer = new ComputeBuffer(_instanceCount, sizeof(float));
 
         _posScaleBuffer.SetData(posScale);
 
-        _compute.SetBuffer(_kernel, "_InstancePosScale", _posScaleBuffer);
-        _compute.SetBuffer(_kernel, "_InstancePress01", _pressBuffer);
+        _compute.SetBuffer(_kernel, IdInstancePosScale, _posScaleBuffer);
+        _compute.SetBuffer(_kernel, IdInstancePress01, _pressBuffer);
     }
 
-    void LateUpdate()
+    private void LateUpdate()
     {
-        if (_instanceCount == 0 ||
+        if (_instanceCount <= 0 ||
             _interactionCam == null ||
             _interactionRT == null ||
             _posScaleBuffer == null ||
             _pressBuffer == null)
+        {
             return;
+        }
 
-        // 프레임당 1회만
-        if (_lastUpdatedFrame == Time.frameCount)
-            return;
-        _lastUpdatedFrame = Time.frameCount;
+        // CamData는 Baker가 글로벌로 박아둔 값 사용
+        Vector4 camData = Shader.GetGlobalVector("_InteractionCamData");
+        _compute.SetVector(IdInteractionCamData, camData);
 
+        // VP 계산
         Matrix4x4 view = _interactionCam.worldToCameraMatrix;
         Matrix4x4 proj = _interactionCam.projectionMatrix;
-        Matrix4x4 gpuProj = GL.GetGPUProjectionMatrix(proj, true); // renderIntoTexture=true
+        Matrix4x4 gpuProj = GL.GetGPUProjectionMatrix(proj, true);
         Matrix4x4 vp = gpuProj * view;
 
-        _compute.SetMatrix("_InteractionViewProj", vp);
-        _compute.SetTexture(_kernel, "_InteractionRT", _interactionRT);
-        _compute.SetInt("_InstanceCount", _instanceCount);
+        _compute.SetMatrix(IdInteractionViewProj, vp);
+        _compute.SetTexture(_kernel, IdInteractionRT, _interactionRT);
+
+        // IMPORTANT: uint로 통일 (음수 방지)
+        uint countU = (uint)Mathf.Max(0, _instanceCount);
+        _compute.SetInt(IdInstanceCount, (int)countU);
 
         int groups = (_instanceCount + 63) / 64;
         _compute.Dispatch(_kernel, groups, 1, 1);

@@ -15,7 +15,7 @@ MonoBehaviour:
   chunkSize: 32
   cellSize: 0.4
   variationCount: 8
-  globalSeed: 12345
+  globalSeed: 13317
   scaleMin: 0.85
   scaleMax: 1.15
   cells:
@@ -22970,4 +22970,688 @@ MonoBehaviour:
   - cx: 0
     cy: 27
     variant: 3
+    scaleByte: 128
+  - cx: 10
+    cy: 2
+    variant: 4
+    scaleByte: 128
+  - cx: 9
+    cy: 4
+    variant: 5
+    scaleByte: 128
+  - cx: 14
+    cy: 5
+    variant: 4
+    scaleByte: 128
+  - cx: 16
+    cy: 6
+    variant: 4
+    scaleByte: 128
+  - cx: 8
+    cy: 1
+    variant: 6
+    scaleByte: 128
+  - cx: 3
+    cy: 4
+    variant: 1
+    scaleByte: 128
+  - cx: 3
+    cy: 2
+    variant: 1
+    scaleByte: 128
+  - cx: 15
+    cy: 2
+    variant: 6
+    scaleByte: 128
+  - cx: 6
+    cy: 5
+    variant: 2
+    scaleByte: 128
+  - cx: 13
+    cy: 5
+    variant: 5
+    scaleByte: 128
+  - cx: 4
+    cy: 6
+    variant: 0
+    scaleByte: 128
+  - cx: 5
+    cy: 6
+    variant: 3
+    scaleByte: 128
+  - cx: 12
+    cy: 6
+    variant: 6
+    scaleByte: 128
+  - cx: 2
+    cy: 7
+    variant: 3
+    scaleByte: 128
+  - cx: 10
+    cy: 11
+    variant: 7
+    scaleByte: 128
+  - cx: 5
+    cy: 5
+    variant: 0
+    scaleByte: 128
+  - cx: 1
+    cy: 7
+    variant: 5
+    scaleByte: 128
+  - cx: 8
+    cy: 9
+    variant: 5
+    scaleByte: 128
+  - cx: 7
+    cy: 10
+    variant: 1
+    scaleByte: 128
+  - cx: 13
+    cy: 10
+    variant: 7
+    scaleByte: 128
+  - cx: 0
+    cy: 12
+    variant: 6
+    scaleByte: 128
+  - cx: 1
+    cy: 2
+    variant: 4
+    scaleByte: 128
+  - cx: 7
+    cy: 9
+    variant: 2
+    scaleByte: 128
+  - cx: 3
+    cy: 11
+    variant: 6
+    scaleByte: 128
+  - cx: 6
+    cy: 11
+    variant: 3
+    scaleByte: 128
+  - cx: 1
+    cy: 0
+    variant: 2
+    scaleByte: 128
+  - cx: 0
+    cy: 2
+    variant: 4
+    scaleByte: 128
+  - cx: 2
+    cy: 6
+    variant: 5
+    scaleByte: 128
+  - cx: 11
+    cy: 7
+    variant: 1
+    scaleByte: 128
+  - cx: 3
+    cy: 8
+    variant: 5
+    scaleByte: 128
+  - cx: 4
+    cy: 8
+    variant: 7
+    scaleByte: 128
+  - cx: 6
+    cy: 8
+    variant: 2
+    scaleByte: 128
+  - cx: 3
+    cy: 10
+    variant: 4
+    scaleByte: 128
+  - cx: 4
+    cy: 10
+    variant: 1
+    scaleByte: 128
+  - cx: 2
+    cy: 12
+    variant: 2
+    scaleByte: 128
+  - cx: 1
+    cy: 13
+    variant: 0
+    scaleByte: 128
+  - cx: 2
+    cy: 13
+    variant: 4
+    scaleByte: 128
+  - cx: 7
+    cy: 16
+    variant: 0
+    scaleByte: 128
+  - cx: 9
+    cy: 16
+    variant: 3
+    scaleByte: 128
+  - cx: 0
+    cy: 1
+    variant: 2
+    scaleByte: 128
+  - cx: 6
+    cy: 1
+    variant: 4
+    scaleByte: 128
+  - cx: 5
+    cy: 4
+    variant: 7
+    scaleByte: 128
+  - cx: 1
+    cy: 6
+    variant: 0
+    scaleByte: 128
+  - cx: 1
+    cy: 8
+    variant: 4
+    scaleByte: 128
+  - cx: 6
+    cy: 9
+    variant: 6
+    scaleByte: 128
+  - cx: 2
+    cy: 10
+    variant: 6
+    scaleByte: 128
+  - cx: 3
+    cy: 13
+    variant: 6
+    scaleByte: 128
+  - cx: 3
+    cy: 15
+    variant: 0
+    scaleByte: 128
+  - cx: 5
+    cy: 16
+    variant: 2
+    scaleByte: 128
+  - cx: 2
+    cy: 23
+    variant: 5
+    scaleByte: 128
+  - cx: 4
+    cy: 3
+    variant: 0
+    scaleByte: 128
+  - cx: 2
+    cy: 8
+    variant: 2
+    scaleByte: 128
+  - cx: 5
+    cy: 10
+    variant: 2
+    scaleByte: 128
+  - cx: 1
+    cy: 12
+    variant: 0
+    scaleByte: 128
+  - cx: 2
+    cy: 18
+    variant: 1
+    scaleByte: 128
+  - cx: 0
+    cy: 21
+    variant: 7
+    scaleByte: 128
+  - cx: 1
+    cy: 22
+    variant: 5
+    scaleByte: 128
+  - cx: 1
+    cy: 27
+    variant: 3
+    scaleByte: 128
+  - cx: 0
+    cy: 9
+    variant: 4
+    scaleByte: 128
+  - cx: 0
+    cy: 11
+    variant: 7
+    scaleByte: 128
+  - cx: 5
+    cy: 13
+    variant: 4
+    scaleByte: 128
+  - cx: 2
+    cy: 22
+    variant: 4
+    scaleByte: 128
+  - cx: 3
+    cy: 22
+    variant: 2
+    scaleByte: 128
+  - cx: 7
+    cy: 23
+    variant: 0
+    scaleByte: 128
+  - cx: 2
+    cy: 24
+    variant: 2
+    scaleByte: 128
+  - cx: 3
+    cy: 25
+    variant: 7
+    scaleByte: 128
+  - cx: 1
+    cy: 26
+    variant: 1
+    scaleByte: 128
+  - cx: 3
+    cy: 26
+    variant: 5
+    scaleByte: 128
+  - cx: 2
+    cy: 27
+    variant: 5
+    scaleByte: 128
+  - cx: 3
+    cy: 27
+    variant: 7
+    scaleByte: 128
+  - cx: 2
+    cy: 31
+    variant: 1
+    scaleByte: 128
+  - cx: 0
+    cy: 33
+    variant: 2
+    scaleByte: 128
+  - cx: 56
+    cy: 0
+    variant: 6
+    scaleByte: 128
+  - cx: 59
+    cy: 0
+    variant: 1
+    scaleByte: 128
+  - cx: 53
+    cy: 1
+    variant: 4
+    scaleByte: 128
+  - cx: 67
+    cy: 12
+    variant: 7
+    scaleByte: 128
+  - cx: 63
+    cy: 23
+    variant: 0
+    scaleByte: 128
+  - cx: 65
+    cy: 25
+    variant: 3
+    scaleByte: 128
+  - cx: 67
+    cy: 25
+    variant: 7
+    scaleByte: 128
+  - cx: 62
+    cy: 29
+    variant: 0
+    scaleByte: 128
+  - cx: 67
+    cy: 29
+    variant: 1
+    scaleByte: 128
+  - cx: 68
+    cy: 29
+    variant: 4
+    scaleByte: 128
+  - cx: 68
+    cy: 31
+    variant: 5
+    scaleByte: 128
+  - cx: 69
+    cy: 33
+    variant: 0
+    scaleByte: 128
+  - cx: 71
+    cy: 33
+    variant: 6
+    scaleByte: 128
+  - cx: 66
+    cy: 26
+    variant: 4
+    scaleByte: 128
+  - cx: 67
+    cy: 31
+    variant: 5
+    scaleByte: 128
+  - cx: 64
+    cy: 33
+    variant: 4
+    scaleByte: 128
+  - cx: 67
+    cy: 33
+    variant: 6
+    scaleByte: 128
+  - cx: 67
+    cy: 34
+    variant: 5
+    scaleByte: 128
+  - cx: 67
+    cy: 35
+    variant: 6
+    scaleByte: 128
+  - cx: 69
+    cy: 35
+    variant: 4
+    scaleByte: 128
+  - cx: 61
+    cy: 30
+    variant: 7
+    scaleByte: 128
+  - cx: 72
+    cy: 32
+    variant: 4
+    scaleByte: 128
+  - cx: 74
+    cy: 32
+    variant: 1
+    scaleByte: 128
+  - cx: 62
+    cy: 33
+    variant: 7
+    scaleByte: 128
+  - cx: 71
+    cy: 35
+    variant: 4
+    scaleByte: 128
+  - cx: 67
+    cy: 37
+    variant: 5
+    scaleByte: 128
+  - cx: 77
+    cy: 37
+    variant: 6
+    scaleByte: 128
+  - cx: 72
+    cy: 39
+    variant: 5
+    scaleByte: 128
+  - cx: 74
+    cy: 39
+    variant: 4
+    scaleByte: 128
+  - cx: 69
+    cy: 40
+    variant: 1
+    scaleByte: 128
+  - cx: 74
+    cy: 40
+    variant: 3
+    scaleByte: 128
+  - cx: 75
+    cy: 40
+    variant: 4
+    scaleByte: 128
+  - cx: 77
+    cy: 40
+    variant: 4
+    scaleByte: 128
+  - cx: 78
+    cy: 40
+    variant: 6
+    scaleByte: 128
+  - cx: 77
+    cy: 42
+    variant: 7
+    scaleByte: 128
+  - cx: 75
+    cy: 43
+    variant: 6
+    scaleByte: 128
+  - cx: 65
+    cy: 38
+    variant: 5
+    scaleByte: 128
+  - cx: 62
+    cy: 39
+    variant: 5
+    scaleByte: 128
+  - cx: 71
+    cy: 39
+    variant: 5
+    scaleByte: 128
+  - cx: 68
+    cy: 40
+    variant: 4
+    scaleByte: 128
+  - cx: 73
+    cy: 40
+    variant: 7
+    scaleByte: 128
+  - cx: 66
+    cy: 42
+    variant: 5
+    scaleByte: 128
+  - cx: 76
+    cy: 45
+    variant: 5
+    scaleByte: 128
+  - cx: 79
+    cy: 46
+    variant: 6
+    scaleByte: 128
+  - cx: 63
+    cy: 42
+    variant: 0
+    scaleByte: 128
+  - cx: 72
+    cy: 45
+    variant: 6
+    scaleByte: 128
+  - cx: 72
+    cy: 46
+    variant: 2
+    scaleByte: 128
+  - cx: 68
+    cy: 47
+    variant: 4
+    scaleByte: 128
+  - cx: 72
+    cy: 47
+    variant: 6
+    scaleByte: 128
+  - cx: 76
+    cy: 47
+    variant: 3
+    scaleByte: 128
+  - cx: 79
+    cy: 49
+    variant: 4
+    scaleByte: 128
+  - cx: 72
+    cy: 51
+    variant: 4
+    scaleByte: 128
+  - cx: 42
+    cy: 52
+    variant: 3
+    scaleByte: 128
+  - cx: 46
+    cy: 54
+    variant: 6
+    scaleByte: 128
+  - cx: 48
+    cy: 56
+    variant: 1
+    scaleByte: 128
+  - cx: 40
+    cy: 53
+    variant: 5
+    scaleByte: 128
+  - cx: 41
+    cy: 54
+    variant: 4
+    scaleByte: 128
+  - cx: 44
+    cy: 55
+    variant: 6
+    scaleByte: 128
+  - cx: 45
+    cy: 56
+    variant: 0
+    scaleByte: 128
+  - cx: 46
+    cy: 56
+    variant: 0
+    scaleByte: 128
+  - cx: 51
+    cy: 56
+    variant: 1
+    scaleByte: 128
+  - cx: 42
+    cy: 53
+    variant: 7
+    scaleByte: 128
+  - cx: 41
+    cy: 56
+    variant: 6
+    scaleByte: 128
+  - cx: 44
+    cy: 56
+    variant: 3
+    scaleByte: 128
+  - cx: 42
+    cy: 57
+    variant: 6
+    scaleByte: 128
+  - cx: 43
+    cy: 57
+    variant: 2
+    scaleByte: 128
+  - cx: 49
+    cy: 57
+    variant: 6
+    scaleByte: 128
+  - cx: 46
+    cy: 58
+    variant: 5
+    scaleByte: 128
+  - cx: 47
+    cy: 62
+    variant: 5
+    scaleByte: 128
+  - cx: 50
+    cy: 63
+    variant: 4
+    scaleByte: 128
+  - cx: 37
+    cy: 53
+    variant: 5
+    scaleByte: 128
+  - cx: 41
+    cy: 60
+    variant: 7
+    scaleByte: 128
+  - cx: 31
+    cy: 74
+    variant: 4
+    scaleByte: 128
+  - cx: 33
+    cy: 75
+    variant: 3
+    scaleByte: 128
+  - cx: 30
+    cy: 77
+    variant: 0
+    scaleByte: 128
+  - cx: 34
+    cy: 77
+    variant: 0
+    scaleByte: 128
+  - cx: 35
+    cy: 77
+    variant: 0
+    scaleByte: 128
+  - cx: 37
+    cy: 77
+    variant: 7
+    scaleByte: 128
+  - cx: 36
+    cy: 78
+    variant: 7
+    scaleByte: 128
+  - cx: 38
+    cy: 79
+    variant: 2
+    scaleByte: 128
+  - cx: 39
+    cy: 79
+    variant: 0
+    scaleByte: 128
+  - cx: 23
+    cy: 76
+    variant: 7
+    scaleByte: 128
+  - cx: 27
+    cy: 76
+    variant: 6
+    scaleByte: 128
+  - cx: 28
+    cy: 77
+    variant: 7
+    scaleByte: 128
+  - cx: 22
+    cy: 78
+    variant: 1
+    scaleByte: 128
+  - cx: 30
+    cy: 78
+    variant: 7
+    scaleByte: 128
+  - cx: 17
+    cy: 76
+    variant: 4
+    scaleByte: 128
+  - cx: 12
+    cy: 78
+    variant: 5
+    scaleByte: 128
+  - cx: 15
+    cy: 78
+    variant: 6
+    scaleByte: 128
+  - cx: 15
+    cy: 79
+    variant: 7
+    scaleByte: 128
+  - cx: 5
+    cy: 78
+    variant: 0
+    scaleByte: 128
+  - cx: 10
+    cy: 78
+    variant: 2
+    scaleByte: 128
+  - cx: 3
+    cy: 75
+    variant: 7
+    scaleByte: 128
+  - cx: 0
+    cy: 77
+    variant: 5
+    scaleByte: 128
+  - cx: 1
+    cy: 77
+    variant: 2
+    scaleByte: 128
+  - cx: 1
+    cy: 78
+    variant: 0
+    scaleByte: 128
+  - cx: 4
+    cy: 78
+    variant: 6
+    scaleByte: 128
+  - cx: 0
+    cy: 79
+    variant: 3
+    scaleByte: 128
+  - cx: 5
+    cy: 79
+    variant: 6
     scaleByte: 128

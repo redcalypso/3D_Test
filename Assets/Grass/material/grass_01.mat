@@ -110,11 +110,13 @@ Material:
     - _GrassDepressAmount: 1
     - _GrassPitchDeg: 30
     - _GrassPitchStrength: 1
+    - _InstancePressCount: 1
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _Press01: 0
     - _PressColorWeight: 2
+    - _PressCount: 0
     - _QueueControl: 0
     - _QueueOffset: 0
     - _ReceiveShadows: 1

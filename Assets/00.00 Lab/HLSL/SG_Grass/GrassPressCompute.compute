@@ -1,49 +1,61 @@
 #pragma kernel CSMain
+#pragma kernel Clear
 
 StructuredBuffer<float4> _InstancePosScale;
 RWStructuredBuffer<float> _InstancePress01;
 
-int _InstanceCount;
-
 Texture2D<float4> _InteractionRT;
 SamplerState sampler_InteractionRT;
 
+uint _InstanceCount;
+
 float4x4 _InteractionViewProj;
+float4 _InteractionCamData;
+
+float2 WorldToUV(float3 worldPos)
+{
+    float worldSize = _InteractionCamData.w;
+    float2 camXZ = _InteractionCamData.xy;
+    float2 minXZ = camXZ - worldSize * 0.5;
+    return (worldPos.xz - minXZ) / worldSize;
+}
 
 [numthreads(64, 1, 1)]
 void CSMain(uint3 id : SV_DispatchThreadID)
 {
     uint index = id.x;
     if (index >= _InstanceCount)
+    {
         return;
+    }
 
     float4 ps = _InstancePosScale[index];
     float3 worldPos = ps.xyz;
     
     float4 clip = mul(_InteractionViewProj, float4(worldPos, 1.0));
-    
     if (clip.w <= 0.0)
     {
         _InstancePress01[index] = 0.0;
         return;
     }
-    
-    float2 ndc = clip.xy / clip.w;
-    float2 uv = ndc * 0.5 + 0.5;
-    
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0)
+
+    float2 uv = WorldToUV(worldPos);
+    if (any(uv < 0.0) || any(uv > 1.0))
     {
         _InstancePress01[index] = 0.0;
         return;
     }
 
     float4 c = _InteractionRT.SampleLevel(sampler_InteractionRT, uv, 0);
-    float press = saturate(c.b * c.a); // B * A
+    float press = saturate(c.b * c.a);
 
     if (press != press)
+    {
         press = 0.0;
+    }
     
-    press = saturate(press);
+    press = frac(index / 64.0);
+
     _InstancePress01[index] = press;
 }
 
@@ -52,6 +64,11 @@ uint _Count;
 [numthreads(256, 1, 1)]
 void Clear(uint3 id : SV_DispatchThreadID)
 {
-    if (id.x >= _Count) return;
-    _InstancePress01[id.x] = 0.0;
+    uint index = id.x;
+    if (index >= _Count)
+    {
+        return;
+    }
+
+    _InstancePress01[index] = 0.0;
 }

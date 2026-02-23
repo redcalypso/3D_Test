@@ -1,3 +1,4 @@
+﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -9,19 +10,28 @@ public sealed class GrassRenderer : MonoBehaviour
     public Mesh[] variationMeshes;      // size >= variationCount
     public Material sharedMaterial;
 
-    private readonly List<Matrix4x4>[] _lists = new List<Matrix4x4>[16];
-    private readonly Matrix4x4[] _tmp = new Matrix4x4[1023];
-
     [Header("Interaction / GPU Press")]
     [SerializeField] private GrassPressGPU _pressGPU;
 
+    [Header("Render Options")]
+    [SerializeField] private bool renderOnlyGameCamera = false;
+
+    private readonly List<Matrix4x4>[] _lists = new List<Matrix4x4>[16];
+    private readonly Matrix4x4[] _tmp = new Matrix4x4[1023];
+
     private MaterialPropertyBlock _mpb;
     private Vector4[] _instancePosScale;
-    private bool _pressInitialized;
-    private int _lastPressLayoutHash;
 
-    // Fallback press buffer (press = 0) shared by all renderers.
+    // 캐시: "순서"가 바뀌었는지 감지하기 위한 해시
+    private int _cachedOrderHash;
+    private int _cachedTotalCount;
+
+    // Dummy press buffer (press = 0)
     private static ComputeBuffer s_dummyPressBuffer;
+
+    private static readonly int IdInstancePress01 = Shader.PropertyToID("_InstancePress01");
+    private static readonly int IdInstancePressCount = Shader.PropertyToID("_InstancePressCount");
+    private static readonly int IdBaseInstanceIndex = Shader.PropertyToID("_BaseInstanceIndex");
 
     private void OnEnable()
     {
@@ -31,21 +41,18 @@ public sealed class GrassRenderer : MonoBehaviour
         _mpb ??= new MaterialPropertyBlock();
 
         EnsureDummyPressBuffer();
-
         RenderPipelineManager.beginCameraRendering += OnBeginCameraRendering;
     }
 
     private void OnDisable()
     {
         RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
-
         ReleaseDummyPressBuffer();
     }
 
     private void OnDestroy()
     {
         RenderPipelineManager.beginCameraRendering -= OnBeginCameraRendering;
-
         ReleaseDummyPressBuffer();
     }
 
@@ -56,8 +63,13 @@ public sealed class GrassRenderer : MonoBehaviour
 
     private void RenderForCamera(Camera cam)
     {
-        var camData = cam.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
-        if (camData != null && camData.renderType == UnityEngine.Rendering.Universal.CameraRenderType.Overlay)
+        // Overlay 카메라 제외 (URP stack)
+        var urpData = cam.GetComponent<UnityEngine.Rendering.Universal.UniversalAdditionalCameraData>();
+        if (urpData != null && urpData.renderType == UnityEngine.Rendering.Universal.CameraRenderType.Overlay)
+            return;
+
+        // 필요하면 Game 카메라만 렌더 (SceneView가 순서 꼬임 만드는지 검사할 때 유용)
+        if (renderOnlyGameCamera && cam.cameraType != CameraType.Game)
             return;
 
         if (grass == null || sharedMaterial == null) return;
@@ -65,57 +77,35 @@ public sealed class GrassRenderer : MonoBehaviour
 
         _mpb ??= new MaterialPropertyBlock();
 
-        for (int i = 0; i < _lists.Length; i++)
-            _lists[i].Clear();
+        // 1) 리스트를 매번 "결정론적 순서"로 빌드
+        BuildListsDeterministic(out int orderHash, out int totalCount);
 
-        float half = grass.chunkSize * 0.5f;
-        int layoutHash = 17;
-
-        foreach (var rec in grass.cells)
+        // 2) 순서/개수가 바뀌면 PressBuffer 인스턴스 순서도 동일하게 재빌드
+        if (_pressGPU != null && (orderHash != _cachedOrderHash || totalCount != _cachedTotalCount))
         {
-            uint seed = GrassHash.MakeSeed(grass.globalSeed, rec.cx, rec.cy);
-            Vector2 jitter = GrassHash.Jitter(seed, grass.cellSize * 0.35f);
-
-            float x = (rec.cx + 0.5f) * grass.cellSize - half + jitter.x;
-            float z = (rec.cy + 0.5f) * grass.cellSize - half + jitter.y;
-
-            float scale = rec.Scale(grass.scaleMin, grass.scaleMax);
-
-            Vector3 localPos = new Vector3(x, 0f, z);
-            Vector3 worldPos = transform.TransformPoint(localPos);
-
-            Quaternion rot = Quaternion.Euler(0f, 0f, 0f);
-            Vector3 scl = Vector3.one * scale;
-
-            _lists[rec.variant].Add(Matrix4x4.TRS(worldPos, rot, scl));
-
-            unchecked
-            {
-                layoutHash = (layoutHash * 31) + rec.variant;
-                layoutHash = (layoutHash * 31) + worldPos.GetHashCode();
-            }
+            RebuildPressInstances(totalCount);
+            _cachedOrderHash = orderHash;
+            _cachedTotalCount = totalCount;
         }
 
-        int totalInstanceCount = 0;
-        for (int vv = 0; vv < grass.variationCount; vv++) totalInstanceCount += _lists[vv].Count;
-
-        EnsurePressSetup(layoutHash, totalInstanceCount);
         EnsureDummyPressBuffer();
 
         ComputeBuffer pressBuffer =
             (_pressGPU != null && _pressGPU.PressBuffer != null)
-            ? _pressGPU.PressBuffer
-            : s_dummyPressBuffer;
+                ? _pressGPU.PressBuffer
+                : s_dummyPressBuffer;
 
+        int pressCount = pressBuffer != null ? pressBuffer.count : 1;
+
+        // 3) Draw — sharedMaterial 상태를 건드리지 말고 MPB로만 세팅
         int baseIndex = 0;
 
-        for (int v = 0; v < grass.variationCount; v++)
+        int vCount = Mathf.Min(grass.variationCount, _lists.Length);
+        for (int v = 0; v < vCount; v++)
         {
             var list = _lists[v];
             if (list == null || list.Count == 0)
-            {
                 continue;
-            }
 
             Mesh mesh = variationMeshes[Mathf.Min(v, variationMeshes.Length - 1)];
             if (mesh == null)
@@ -132,14 +122,11 @@ public sealed class GrassRenderer : MonoBehaviour
                     _tmp[i] = list[offset + i];
 
                 _mpb.Clear();
-                _mpb.SetBuffer("_InstancePress01", pressBuffer);
-                _mpb.SetInt("_BaseInstanceIndex", baseIndex + offset);
-                _mpb.SetInt("_PressCount", pressBuffer != null ? pressBuffer.count : 1);
+                _mpb.SetBuffer(IdInstancePress01, pressBuffer);
+                _mpb.SetFloat(IdInstancePressCount, pressCount);
+                _mpb.SetFloat(IdBaseInstanceIndex, baseIndex + offset);
 
-                Graphics.DrawMeshInstanced(
-                    mesh, 0, sharedMaterial,
-                    _tmp, count, _mpb
-                );
+                Graphics.DrawMeshInstanced(mesh, 0, sharedMaterial, _tmp, count, _mpb);
 
                 offset += count;
             }
@@ -148,39 +135,98 @@ public sealed class GrassRenderer : MonoBehaviour
         }
     }
 
-    private void EnsurePressSetup(int layoutHash, int totalInstanceCount)
+    private void BuildListsDeterministic(out int orderHash, out int totalCount)
     {
-        if (_pressGPU == null || grass == null)
-            return;
+        for (int i = 0; i < _lists.Length; i++)
+            _lists[i].Clear();
 
-        bool layoutChanged = !_pressInitialized || _lastPressLayoutHash != layoutHash;
-        bool countChanged = _pressGPU.InstanceCount != totalInstanceCount;
+        float half = grass.chunkSize * 0.5f;
+        int cellsPerAxis = grass.CellsPerAxis;
 
-        if (!layoutChanged && !countChanged)
-            return;
+        // CellRecord 배열로 복사해서 정렬 (variant -> cx -> cy)
+        var src = grass.cells;
+        int n = src != null ? src.Count : 0;
 
-        _mpb ??= new MaterialPropertyBlock();
+        CellRecord[] sorted = new CellRecord[n];
+        for (int i = 0; i < n; i++) sorted[i] = src[i];
 
-        var posScaleList = new List<Vector4>(totalInstanceCount);
+        Array.Sort(sorted, (a, b) =>
+        {
+            int va = a.variant;
+            int vb = b.variant;
+            if (va != vb) return va.CompareTo(vb);
 
-        for (int v = 0; v < grass.variationCount && v < _lists.Length; v++)
+            int cxa = a.cx;
+            int cxb = b.cx;
+            if (cxa != cxb) return cxa.CompareTo(cxb);
+
+            int cya = a.cy;
+            int cyb = b.cy;
+            return cya.CompareTo(cyb);
+        });
+
+        unchecked
+        {
+            int h = 17;
+            h = h * 31 + grass.variationCount;
+            h = h * 31 + n;
+            h = h * 31 + transform.localToWorldMatrix.GetHashCode();
+
+            for (int i = 0; i < n; i++)
+            {
+                var rec = sorted[i];
+
+                uint seed = GrassHash.MakeSeed(grass.globalSeed, rec.cx, rec.cy);
+                Vector2 jitter = GrassHash.Jitter(seed, grass.cellSize * 0.35f);
+
+                float x = ((int)rec.cx + 0.5f) * grass.cellSize - half + jitter.x;
+                float z = ((int)rec.cy + 0.5f) * grass.cellSize - half + jitter.y;
+
+                float scale = rec.Scale(grass.scaleMin, grass.scaleMax);
+
+                Vector3 localPos = new Vector3(x, 0f, z);
+                Vector3 worldPos = transform.TransformPoint(localPos);
+
+                int variant = Mathf.Clamp(rec.variant, 0, grass.variationCount - 1);
+                if (variant < _lists.Length)
+                    _lists[variant].Add(Matrix4x4.TRS(worldPos, Quaternion.identity, Vector3.one * scale));
+
+                // 해시에 순서 키를 포함(중요!)
+                h = h * 31 + variant;
+                h = h * 31 + rec.cx;
+                h = h * 31 + rec.cy;
+            }
+
+            orderHash = h;
+        }
+
+        totalCount = 0;
+        int vCount = Mathf.Min(grass.variationCount, _lists.Length);
+        for (int v = 0; v < vCount; v++)
+            totalCount += _lists[v].Count;
+    }
+
+    private void RebuildPressInstances(int totalCount)
+    {
+        if (_pressGPU == null) return;
+
+        var posScaleList = new List<Vector4>(totalCount);
+
+        int vCount = Mathf.Min(grass.variationCount, _lists.Length);
+        for (int v = 0; v < vCount; v++)
         {
             var list = _lists[v];
             if (list == null) continue;
 
             for (int i = 0; i < list.Count; i++)
             {
-                Matrix4x4 m = list[i];
-                Vector3 pos = m.GetColumn(3);
-
+                Vector3 pos = list[i].GetColumn(3);
                 posScaleList.Add(new Vector4(pos.x, pos.y, pos.z, 1f));
             }
         }
 
         _instancePosScale = posScaleList.ToArray();
         _pressGPU.SetInstances(_instancePosScale);
-        _pressInitialized = true;
-        _lastPressLayoutHash = layoutHash;
     }
 
     private static void EnsureDummyPressBuffer()
@@ -193,10 +239,9 @@ public sealed class GrassRenderer : MonoBehaviour
 
     private static void ReleaseDummyPressBuffer()
     {
-        if (s_dummyPressBuffer != null)
-        {
-            s_dummyPressBuffer.Dispose();
-            s_dummyPressBuffer = null;
-        }
+        if (s_dummyPressBuffer == null) return;
+
+        s_dummyPressBuffer.Dispose();
+        s_dummyPressBuffer = null;
     }
 }
