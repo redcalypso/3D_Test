@@ -44,6 +44,13 @@ public sealed class InteractionMapBaker : MonoBehaviour
     [Tooltip("MarkDirty 호출 후, 몇 프레임 동안 RT 렌더를 유지할지. (브러시가 여러 프레임이면 2~3 추천)")]
     [SerializeField] private int _dirtyFrames = 2;
 
+    [Header("Auto Dirty (Bridge)")]
+    [SerializeField] private bool _autoDirtyOnCameraMove = true;
+    [SerializeField] private int _autoDirtyFramesOnMove = 2;
+
+    [Header("Bypass / Debug")]
+    [SerializeField] private bool _bypassEventDriven = false; // true면 MarkDirty 없어도 항상 렌더
+
     private int _rtId;
     private int _camPosXZId;
     private int _camParamsId;
@@ -88,9 +95,10 @@ public sealed class InteractionMapBaker : MonoBehaviour
             Shader.SetGlobalTexture(_rtId, _interactionRT);
         }
 
-        // 이벤트 드리븐이면 카메라 자동 렌더를 꺼두고 필요할 때 Render() 호출
-        if (_eventDrivenRender)
+        if (_eventDrivenRender && !_bypassEventDriven)
             _interactionCamera.enabled = false;
+        else
+            _interactionCamera.enabled = true;
 
         PushCameraGlobals(force: true);
     }
@@ -158,6 +166,9 @@ public sealed class InteractionMapBaker : MonoBehaviour
             CamRotation
         );
 
+        if (_eventDrivenRender && _autoDirtyOnCameraMove)
+            MarkDirty(_autoDirtyFramesOnMove);
+
         // CamPosXZ: only changes when camera moves
         Shader.SetGlobalVector(_camPosXZId, new Vector4(snapX, snapZ, 0f, 0f));
 
@@ -170,14 +181,15 @@ public sealed class InteractionMapBaker : MonoBehaviour
 
     private void MaybeRenderRT()
     {
+        if (_bypassEventDriven) return;
+
         if (!_eventDrivenRender)
-            return; // 카메라가 enable 상태라면 URP가 알아서 렌더
+            return;
 
         if (_dirtyFrameCountdown <= 0)
             return;
 
         _dirtyFrameCountdown--;
-
         _interactionCamera.Render();
     }
 

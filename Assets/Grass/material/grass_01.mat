@@ -115,7 +115,7 @@ Material:
     - _OcclusionStrength: 1
     - _Parallax: 0.005
     - _Press01: 0
-    - _PressColorWeight: 2
+    - _PressColorWeight: 3
     - _PressCount: 0
     - _QueueControl: 0
     - _QueueOffset: 0
