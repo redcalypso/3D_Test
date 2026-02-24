@@ -1,13 +1,11 @@
 void SamplePress_float(float instanceID, out float press)
 {
-    // Keep signature for Shader Graph, but use world-space RT sampling for stable color press.
+    float3 worldPos = mul(GetObjectToWorldMatrix(), float4(0.0, 0.0, 0.0, 1.0)).xyz;
 
-    float4x4 objectToWorld = GetObjectToWorldMatrix();
-    float3 worldPos = mul(objectToWorld, float4(0.0, 0.0, 0.0, 1.0)).xyz;
+    float2 camXZ = _InteractionCamPosXZ.xy;
+    float invWorldSize = _InteractionCamParams.z;
 
-    float worldSize = max(_InteractionCamData.w, 1e-5);
-    float2 minXZ = _InteractionCamData.xy - worldSize * 0.5;
-    float2 uv = (worldPos.xz - minXZ) / worldSize;
+    float2 uv = (worldPos.xz - camXZ) * invWorldSize + 0.5;
 
     if (any(uv < 0.0) || any(uv > 1.0))
     {

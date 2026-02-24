@@ -492,7 +492,15 @@ MonoBehaviour:
   _cameraHeight: 50
   _useLateUpdate: 1
   _rtGlobalName: _InteractionRT
-  _camDataGlobalName: _InteractionCamData
+  _camPosXZGlobalName: _InteractionCamPosXZ
+  _camParamsGlobalName: _InteractionCamParams
+  _useManualNeutralCompensation: 1
+  _manualNeutralCompensatedRG: 0.735
+  _neutralTarget: {r: 0.5, g: 0.5, b: 0, a: 0}
+  _cameraDataUpdateHz: 30
+  _skipWhenSnapUnchanged: 1
+  _eventDrivenRender: 1
+  _dirtyFrames: 2
 --- !u!114 &1095173386
 MonoBehaviour:
   m_ObjectHideFlags: 0
