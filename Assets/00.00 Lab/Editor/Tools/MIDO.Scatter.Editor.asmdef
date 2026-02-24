@@ -1,0 +1,26 @@
+{
+    "name":  "MIDO.Scatter.Editor",
+    "rootNamespace":  "",
+    "references":  [
+                       "MIDO.Scatter.Runtime"
+                   ],
+    "includePlatforms":  [
+                             "Editor"
+                         ],
+    "excludePlatforms":  [
+
+                         ],
+    "allowUnsafeCode":  false,
+    "overrideReferences":  false,
+    "precompiledReferences":  [
+
+                              ],
+    "autoReferenced":  true,
+    "defineConstraints":  [
+
+                          ],
+    "versionDefines":  [
+
+                       ],
+    "noEngineReferences":  false
+}
