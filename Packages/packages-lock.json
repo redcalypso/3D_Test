@@ -1,5 +1,13 @@
 {
   "dependencies": {
+    "com.midostudio.eis-system": {
+      "version": "file:com.midostudio.eis-system",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.render-pipelines.universal": "17.3.0"
+      }
+    },
     "com.unity.ai.navigation": {
       "version": "2.0.10",
       "depth": 0,
