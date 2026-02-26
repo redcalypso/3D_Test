@@ -195,6 +195,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f4ea9e3ea0869734481b8d30b008d9d4, type: 3}
+--- !u!114 &388104643 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 7252234008431072509, guid: 2dd99aacad289bc4f8452a597680dc21, type: 3}
+  m_PrefabInstance: {fileID: 673753844}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3863a68c27210c14a858082769b81446, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionMapBakerV2
 --- !u!1001 &657207177
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -213,7 +224,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7927112549262303239, guid: 1f384c9878b1aa944b0422fa17ede9b1, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -6.5
       objectReference: {fileID: 0}
     - target: {fileID: 7927112549262303239, guid: 1f384c9878b1aa944b0422fa17ede9b1, type: 3}
       propertyPath: m_LocalPosition.y
@@ -221,7 +232,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7927112549262303239, guid: 1f384c9878b1aa944b0422fa17ede9b1, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -4.85
       objectReference: {fileID: 0}
     - target: {fileID: 7927112549262303239, guid: 1f384c9878b1aa944b0422fa17ede9b1, type: 3}
       propertyPath: m_LocalRotation.w
@@ -251,6 +262,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 8216012657414987383, guid: 1f384c9878b1aa944b0422fa17ede9b1, type: 3}
+      propertyPath: bakerV2
+      value: 
+      objectReference: {fileID: 388104643}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
