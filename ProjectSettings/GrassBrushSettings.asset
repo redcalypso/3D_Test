@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &1
+MonoBehaviour:
+  m_ObjectHideFlags: 53
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8995bffed8dfd86418c60d060eb8b949, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp-Editor::GrassBrushSettings
+  mode: 0
+  radius: 7.2
+  density01: 1
+  dragStepMeters: 0.25
+  strength: 1
+  randomVariant: 1
+  fixedVariant: 0
+  scaleMode: 0
+  deltaScale01: -1.2
+  scalePower: 2.5
+  scaleMultiplier: 1.5
+  targetScale01: 0.5
+  enableCopyPaste: 1
+  previewCells: 1
+  previewMax: 600
