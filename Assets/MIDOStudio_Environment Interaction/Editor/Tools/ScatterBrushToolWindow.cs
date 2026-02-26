@@ -2,17 +2,24 @@
 using System;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEditorInternal;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.SceneManagement;
 
 public sealed class ScatterBrushToolWindow : EditorWindow
 {
     private enum Mode { Paint, Erase, Scale }
     private enum ScaleMode { TowardTarget, Additive }
+    private enum PreviewFrameRate { Off = 0, Fps30 = 30, Fps60 = 60 }
 
     [Serializable]
     private sealed class ScatterChunkClipboard
     {
         public int surfaceType;
+        public int chunkX;
+        public int chunkY;
         public float chunkSize;
         public float cellSize;
         public int variationCount;
@@ -20,6 +27,22 @@ public sealed class ScatterBrushToolWindow : EditorWindow
         public float scaleMin;
         public float scaleMax;
         public List<CellRecord> cells;
+    }
+
+    private readonly struct ActiveChunk
+    {
+        public readonly RoomScatterDataSO roomData;
+        public readonly RoomScatterDataSO.SurfaceLayerData surface;
+        public readonly RoomScatterDataSO.ChunkData chunk;
+
+        public ActiveChunk(RoomScatterDataSO roomData, RoomScatterDataSO.SurfaceLayerData surface, RoomScatterDataSO.ChunkData chunk)
+        {
+            this.roomData = roomData;
+            this.surface = surface;
+            this.chunk = chunk;
+        }
+
+        public bool IsValid => roomData != null && surface != null && chunk != null;
     }
 
     [FilePath("ProjectSettings/ScatterBrushToolWindowState.asset", FilePathAttribute.Location.ProjectFolder)]
@@ -30,6 +53,15 @@ public sealed class ScatterBrushToolWindow : EditorWindow
 
         public bool toolEnabled = true;
         public bool useModifierShortcuts = true;
+        public bool paintModeEnabled = false;
+        public bool capsScaleMode = false;
+        public bool autoCreateChunkOnPaint = true;
+        public bool showEditorPreview = true;
+        public bool useMeshSurfaceHit = true;
+        public LayerMask meshSurfaceLayerMask = ~0;
+        [Range(0f, 89f)] public float maxSurfaceSlopeDeg = 60f;
+        [Min(1f)] public float meshHitDistance = 500f;
+        public bool fallbackToFieldPlane = true;
 
         public Mode mode = Mode.Paint;
         public float radius = 2.0f;
@@ -45,6 +77,7 @@ public sealed class ScatterBrushToolWindow : EditorWindow
         public float dragStepMeters = 0.25f;
         public bool previewCells = true;
         public int previewMax = 600;
+        public PreviewFrameRate forcePreviewFrameRate = PreviewFrameRate.Off;
 
         public void SaveState()
         {
@@ -55,10 +88,23 @@ public sealed class ScatterBrushToolWindow : EditorWindow
     private readonly Dictionary<int, int> _keyToIndex = new Dictionary<int, int>(4096);
     private static readonly ScatterSurfaceType[] s_surfaceValues = (ScatterSurfaceType[])Enum.GetValues(typeof(ScatterSurfaceType));
     private static readonly string[] s_surfaceLabels = Array.ConvertAll(s_surfaceValues, v => v.ToString());
+    private static readonly List<RoomScatterDataSO.SurfaceLayerData> s_surfaceScratch = new List<RoomScatterDataSO.SurfaceLayerData>(16);
+    private static readonly List<RoomScatterDataSO.ChunkRef> s_previewChunkScratch = new List<RoomScatterDataSO.ChunkRef>(64);
+    private static readonly Matrix4x4[] s_previewMatrices = new Matrix4x4[1023];
+    private static readonly int IdPressColorWeight = Shader.PropertyToID("_PressColorWeight");
+    private static readonly int IdBendColorWeight = Shader.PropertyToID("_BendColorWeight");
+    private static readonly int IdInstancePressCount = Shader.PropertyToID("_InstancePressCount");
+    private static readonly int IdPressCount = Shader.PropertyToID("_PressCount");
+    private static readonly int IdBaseInstanceIndex = Shader.PropertyToID("_BaseInstanceIndex");
 
     private bool _strokeActive;
     private bool _hasLastApplied;
     private Vector3 _lastAppliedLocal;
+    private static double s_nextSceneViewRepaintTime;
+    private static GameObject s_prefabPreviewManagerGO;
+    private static ScatterRenderManager s_prefabPreviewManager;
+    private static ScatterField s_prefabPreviewTargetField;
+    private static int s_prefabPreviewStageHandle = -1;
 
     [MenuItem("Tools/MIDO/Scatter Brush Tool")]
     public static void Open()
@@ -75,13 +121,23 @@ public sealed class ScatterBrushToolWindow : EditorWindow
     {
         SceneView.duringSceneGui -= OnSceneGUI;
         SceneView.duringSceneGui += OnSceneGUI;
+        EditorApplication.update -= OnEditorUpdate;
+        EditorApplication.update += OnEditorUpdate;
         TryAutoAssignFromSelection();
     }
 
     private void OnDisable()
     {
         SceneView.duringSceneGui -= OnSceneGUI;
+        EditorApplication.update -= OnEditorUpdate;
+        CleanupPrefabStagePreviewManager();
         EndStroke();
+    }
+
+    private void OnDestroy()
+    {
+        EditorApplication.update -= OnEditorUpdate;
+        CleanupPrefabStagePreviewManager();
     }
 
     private void OnSelectionChange()
@@ -131,7 +187,13 @@ public sealed class ScatterBrushToolWindow : EditorWindow
             s.surfaceType = s_surfaceValues[Mathf.Clamp(nextSurfaceIndex, 0, s_surfaceValues.Length - 1)];
 
             s.toolEnabled = EditorGUILayout.Toggle("Enable Tool", s.toolEnabled);
-            s.useModifierShortcuts = EditorGUILayout.Toggle("Use Shift/Ctrl", s.useModifierShortcuts);
+            s.paintModeEnabled = EditorGUILayout.Toggle("Paint Mode", s.paintModeEnabled);
+            s.useModifierShortcuts = EditorGUILayout.Toggle("Use Shortcut Keys", s.useModifierShortcuts);
+            if (s.useModifierShortcuts)
+            {
+                using (new EditorGUI.DisabledScope(true))
+                    EditorGUILayout.Toggle("CapsLock Scale Mode", s.capsScaleMode);
+            }
 
             EditorGUILayout.Space(6);
             EditorGUILayout.LabelField("Brush", EditorStyles.boldLabel);
@@ -159,15 +221,38 @@ public sealed class ScatterBrushToolWindow : EditorWindow
             s.previewCells = EditorGUILayout.Toggle("Preview Cells", s.previewCells);
             using (new EditorGUI.DisabledScope(!s.previewCells))
                 s.previewMax = EditorGUILayout.IntSlider("Preview Max", s.previewMax, 50, 3000);
+            s.forcePreviewFrameRate = (PreviewFrameRate)EditorGUILayout.EnumPopup("Force Preview FPS", s.forcePreviewFrameRate);
+
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField("Auto Create", EditorStyles.boldLabel);
+            s.autoCreateChunkOnPaint = EditorGUILayout.Toggle("Create Chunk On First Paint", s.autoCreateChunkOnPaint);
+            s.showEditorPreview = EditorGUILayout.Toggle("Show Editor Preview", s.showEditorPreview);
+
+            EditorGUILayout.Space(4);
+            EditorGUILayout.LabelField("Surface Hit", EditorStyles.boldLabel);
+            s.useMeshSurfaceHit = EditorGUILayout.Toggle("Use Collider Surface Hit", s.useMeshSurfaceHit);
+            if (s.useMeshSurfaceHit)
+            {
+                s.meshSurfaceLayerMask = LayerMaskField("Collider Layer Mask", s.meshSurfaceLayerMask);
+                s.maxSurfaceSlopeDeg = EditorGUILayout.Slider("Max Slope Deg", s.maxSurfaceSlopeDeg, 0f, 89f);
+                s.meshHitDistance = EditorGUILayout.FloatField("Hit Distance", s.meshHitDistance);
+                s.fallbackToFieldPlane = EditorGUILayout.Toggle("Fallback To Field Plane", s.fallbackToFieldPlane);
+            }
+
+            if (s.targetField is ScatterField sf && sf.roomData == null)
+            {
+                EditorGUILayout.HelpBox("Room Data is not assigned on ScatterField. Assign/Create RoomScatterDataSO first.", MessageType.Warning);
+            }
 
             EditorGUILayout.Space(6);
             DrawCopyPasteUI(s);
 
             EditorGUILayout.HelpBox(
                 "SceneView Input\n" +
-                " - LMB Drag: Apply Brush\n" +
-                " - Shift + LMB: Erase (when shortcut enabled)\n" +
-                " - Ctrl + LMB: Scale (when shortcut enabled)",
+                " - Paint Mode OFF: selection/move tools work normally\n" +
+                " - Paint Mode ON + Shift + LMB: Paint\n" +
+                " - Paint Mode ON + Ctrl + LMB: Erase\n" +
+                " - Paint Mode ON + CapsLock + LMB: Scale",
                 MessageType.Info
             );
 
@@ -187,80 +272,106 @@ public sealed class ScatterBrushToolWindow : EditorWindow
     {
         if (s.targetField == null)
         {
-            EditorGUILayout.HelpBox("Target Field(ScatterField)�� �����ϴ�.", MessageType.Warning);
+            EditorGUILayout.HelpBox("Target Field (ScatterField) is not assigned.", MessageType.Warning);
             return;
         }
 
-        var chunk = ResolveChunk(s.targetField, s.surfaceType);
-        if (chunk == null)
+        if (!(s.targetField is ScatterField sf) || sf.roomData == null)
         {
-            EditorGUILayout.HelpBox($"Ÿ�� �ʵ忡�� {s.surfaceType} Chunk�� ã�� ���߽��ϴ�.", MessageType.Warning);
+            EditorGUILayout.HelpBox("RoomScatterDataSO is not assigned.", MessageType.Warning);
             return;
         }
 
-        EditorGUILayout.LabelField("Chunk Asset", chunk.name);
-        EditorGUILayout.LabelField("Surface", chunk.EffectiveSurfaceType.ToString());
-        EditorGUILayout.LabelField("Cell Count", (chunk.cells != null ? chunk.cells.Count : 0).ToString());
+        RoomScatterDataSO.SurfaceLayerData surface = sf.roomData.FindSurface(s.surfaceType);
+        if (surface == null || surface.chunks == null || surface.chunks.Count == 0)
+        {
+            if (s.autoCreateChunkOnPaint)
+                EditorGUILayout.HelpBox($"{s.surfaceType} chunk is missing. Shift+LMB (Paint Mode ON) will auto-create and bind one.", MessageType.Info);
+            else
+                EditorGUILayout.HelpBox($"{s.surfaceType} chunk is missing on the target field.", MessageType.Warning);
+            return;
+        }
+
+        int totalCells = 0;
+        for (int i = 0; i < surface.chunks.Count; i++)
+            totalCells += surface.chunks[i] != null && surface.chunks[i].cells != null ? surface.chunks[i].cells.Count : 0;
+
+        EditorGUILayout.LabelField("Surface", surface.surfaceType.ToString());
+        EditorGUILayout.LabelField("Chunk Count", surface.chunks.Count.ToString());
+        EditorGUILayout.LabelField("Total Cell Count", totalCells.ToString());
     }
 
     private void DrawCopyPasteUI(BrushState s)
     {
+        ScatterField scatterField = s.targetField as ScatterField;
+
         using (new EditorGUILayout.HorizontalScope())
         {
             using (new EditorGUI.DisabledScope(!HasValidChunk(s)))
             {
                 if (GUILayout.Button("Copy Chunk", GUILayout.Height(24f)))
-                    CopyChunkToClipboard(ResolveChunk(s.targetField, s.surfaceType));
+                    CopyChunkToClipboard(ResolveFirstChunk(s.targetField, s.surfaceType));
             }
 
             using (new EditorGUI.DisabledScope(!HasValidChunk(s)))
             {
                 if (GUILayout.Button("Paste Chunk", GUILayout.Height(24f)))
-                    PasteChunkFromClipboard(ResolveChunk(s.targetField, s.surfaceType));
+                    PasteChunkFromClipboard(ResolveFirstChunk(s.targetField, s.surfaceType));
             }
 
             using (new EditorGUI.DisabledScope(!HasValidChunk(s)))
             {
                 if (GUILayout.Button("Clear Cells", GUILayout.Height(24f)))
-                    ClearCells(ResolveChunk(s.targetField, s.surfaceType));
+                    ClearCells(ResolveFirstChunk(s.targetField, s.surfaceType));
             }
+        }
+
+        using (new EditorGUI.DisabledScope(scatterField == null || !HasValidChunk(s)))
+        {
+            if (GUILayout.Button("Rebake Chunk Projection", GUILayout.Height(22f)))
+                RebakeChunkProjection(scatterField, ResolveFirstChunk(s.targetField, s.surfaceType));
         }
     }
 
     private static bool HasValidChunk(BrushState s)
     {
-        return s.targetField != null && ResolveChunk(s.targetField, s.surfaceType) != null;
+        ActiveChunk chunk = ResolveFirstChunk(s.targetField, s.surfaceType);
+        return chunk.IsValid;
     }
 
-    private static void CopyChunkToClipboard(ScatterChunkSO chunk)
+    private static void CopyChunkToClipboard(ActiveChunk active)
     {
-        if (chunk == null)
+        if (!active.IsValid)
             return;
 
+        var surface = active.surface;
+        var chunk = active.chunk;
         var data = new ScatterChunkClipboard
         {
-            surfaceType = (int)chunk.EffectiveSurfaceType,
-            chunkSize = chunk.chunkSize,
-            cellSize = chunk.cellSize,
-            variationCount = chunk.EffectiveVariationCount,
-            globalSeed = chunk.EffectiveGlobalSeed,
-            scaleMin = chunk.EffectiveScaleMin,
-            scaleMax = chunk.EffectiveScaleMax,
+            surfaceType = (int)surface.surfaceType,
+            chunkX = chunk.chunkX,
+            chunkY = chunk.chunkY,
+            chunkSize = surface.chunkSize,
+            cellSize = surface.cellSize,
+            variationCount = surface.EffectiveVariationCount,
+            globalSeed = surface.EffectiveGlobalSeed,
+            scaleMin = surface.EffectiveScaleMin,
+            scaleMax = surface.EffectiveScaleMax,
             cells = chunk.cells != null ? new List<CellRecord>(chunk.cells) : new List<CellRecord>()
         };
 
         EditorGUIUtility.systemCopyBuffer = JsonUtility.ToJson(data);
     }
 
-    private static void PasteChunkFromClipboard(ScatterChunkSO chunk)
+    private static void PasteChunkFromClipboard(ActiveChunk active)
     {
-        if (chunk == null)
+        if (!active.IsValid)
             return;
 
         var raw = EditorGUIUtility.systemCopyBuffer;
         if (string.IsNullOrEmpty(raw))
         {
-            EditorUtility.DisplayDialog("Scatter Brush Tool", "Ŭ�����尡 ��� �ֽ��ϴ�.", "OK");
+            EditorUtility.DisplayDialog("Scatter Brush Tool", "클占쏙옙占쏙옙占썲가 占쏙옙占?占쌍쏙옙占싹댐옙.", "OK");
             return;
         }
 
@@ -276,81 +387,166 @@ public sealed class ScatterBrushToolWindow : EditorWindow
 
         if (data == null)
         {
-            EditorUtility.DisplayDialog("Scatter Brush Tool", "Ŭ������ ������ ������ �ùٸ��� �ʽ��ϴ�.", "OK");
+            EditorUtility.DisplayDialog("Scatter Brush Tool", "클占쏙옙占쏙옙占쏙옙 占쏙옙占쏙옙占쏙옙 占쏙옙占쏙옙占쏙옙 占시바몌옙占쏙옙 占십쏙옙占싹댐옙.", "OK");
             return;
         }
 
-        Undo.RecordObject(chunk, "Paste Scatter Chunk");
+        Undo.RecordObject(active.roomData, "Paste Scatter Chunk");
 
-        chunk.surfaceType = (ScatterSurfaceType)Mathf.Clamp(data.surfaceType, 0, s_surfaceValues.Length - 1);
-        chunk.chunkSize = Mathf.Max(0.01f, data.chunkSize);
-        chunk.cellSize = Mathf.Max(0.01f, data.cellSize);
-        chunk.variationCount = Mathf.Clamp(data.variationCount, 1, 16);
-        chunk.globalSeed = data.globalSeed;
-        chunk.scaleMin = data.scaleMin;
-        chunk.scaleMax = data.scaleMax;
-        chunk.cells = data.cells != null ? new List<CellRecord>(data.cells) : new List<CellRecord>();
-        chunk.Touch();
-        EditorUtility.SetDirty(chunk);
+        active.surface.surfaceType = (ScatterSurfaceType)Mathf.Clamp(data.surfaceType, 0, s_surfaceValues.Length - 1);
+        active.surface.chunkSize = Mathf.Max(0.01f, data.chunkSize);
+        active.surface.cellSize = Mathf.Max(0.01f, data.cellSize);
+        active.surface.variationCount = Mathf.Clamp(data.variationCount, 1, 16);
+        active.surface.globalSeed = data.globalSeed;
+        active.surface.scaleMin = data.scaleMin;
+        active.surface.scaleMax = data.scaleMax;
+        active.chunk.cells = data.cells != null ? new List<CellRecord>(data.cells) : new List<CellRecord>();
+        active.roomData.Touch();
+        EditorUtility.SetDirty(active.roomData);
         AssetDatabase.SaveAssets();
         SceneView.RepaintAll();
     }
 
-    private static void ClearCells(ScatterChunkSO chunk)
+    private static void ClearCells(ActiveChunk active)
     {
-        if (chunk == null)
+        if (!active.IsValid)
             return;
 
-        Undo.RecordObject(chunk, "Clear Scatter Cells");
-        chunk.cells.Clear();
-        chunk.Touch();
-        EditorUtility.SetDirty(chunk);
+        Undo.RecordObject(active.roomData, "Clear Scatter Cells");
+        active.chunk.cells.Clear();
+        active.roomData.Touch();
+        EditorUtility.SetDirty(active.roomData);
+        SceneView.RepaintAll();
+    }
+
+    private static void RebakeChunkProjection(ScatterField field, ActiveChunk active)
+    {
+        if (field == null || !active.IsValid || active.chunk.cells == null)
+            return;
+
+        Undo.RecordObject(active.roomData, "Rebake Scatter Chunk Projection");
+        RoomScatterDataSO.SurfaceLayerData surface = active.surface;
+        RoomScatterDataSO.ChunkData chunk = active.chunk;
+        float chunkSize = Mathf.Max(0.0001f, surface.chunkSize);
+        float half = chunkSize * 0.5f;
+        float cellSize = Mathf.Max(0.0001f, surface.cellSize);
+        uint globalSeed = surface.EffectiveGlobalSeed;
+        float chunkBaseX = chunk.chunkX * chunkSize;
+        float chunkBaseZ = chunk.chunkY * chunkSize;
+        float jitterRadius = cellSize * 0.35f;
+        Transform root = field.transform;
+
+        List<CellRecord> cells = chunk.cells;
+        for (int i = 0; i < cells.Count; i++)
+        {
+            CellRecord rec = cells[i];
+            uint seed = ScatterHash.MakeSeed(globalSeed, rec.cx, rec.cy);
+            Vector2 jitter = ScatterHash.Jitter(seed, jitterRadius);
+            float x = chunkBaseX + ((int)rec.cx + 0.5f) * cellSize - half + jitter.x;
+            float z = chunkBaseZ + ((int)rec.cy + 0.5f) * cellSize - half + jitter.y;
+            Vector3 local = new Vector3(x, 0f, z);
+            SampleProjectionData(field, root, local, out rec.localY, out rec.localNormal);
+            cells[i] = rec;
+        }
+
+        active.roomData.Touch();
+        EditorUtility.SetDirty(active.roomData);
+        AssetDatabase.SaveAssets();
         SceneView.RepaintAll();
     }
 
     private void OnSceneGUI(SceneView view)
     {
         var s = BrushState.instance;
-        var field = s.targetField;
-        var grassChunk = ResolveChunk(field, s.surfaceType);
+        if (!s.toolEnabled || s.targetField == null)
+        {
+            CleanupPrefabStagePreviewManager();
+            EndStroke();
+            return;
+        }
 
-        if (!s.toolEnabled || field == null || grassChunk == null)
+        if (!(s.targetField is ScatterField scatterField))
+        {
+            CleanupPrefabStagePreviewManager();
+            EndStroke();
+            return;
+        }
+
+        var e = Event.current;
+        bool useToolPreviewManager = EnsureToolPreviewManager(scatterField, s);
+        if (!useToolPreviewManager)
+            DrawEditorPreviewIfNeeded(scatterField, view, s);
+
+        if (!TryGetBrushHit(scatterField.transform, s, out var hitWorld, out _))
+            return;
+
+        if (e.type == EventType.KeyDown && e.keyCode == KeyCode.CapsLock && s.useModifierShortcuts)
+        {
+            s.capsScaleMode = !s.capsScaleMode;
+            s.mode = s.capsScaleMode ? Mode.Scale : Mode.Paint;
+            s.SaveState();
+            e.Use();
+            Repaint();
+            SceneView.RepaintAll();
+            return;
+        }
+
+        if (s.useModifierShortcuts)
+            UpdateModeFromModifiers(s, e);
+
+        var brushCenterLocal = scatterField.transform.InverseTransformPoint(hitWorld);
+        ActiveChunk activeChunk = ResolveChunkAtLocalPosition(scatterField, s.surfaceType, brushCenterLocal);
+
+        if (s.paintModeEnabled)
+            DrawBrushGizmo(s.mode, hitWorld, s.radius);
+
+        if (activeChunk.IsValid && s.paintModeEnabled && s.previewCells && e.type == EventType.Repaint)
+            DrawCellPreview(scatterField.transform, activeChunk, s, brushCenterLocal);
+
+        if (e.alt)
+            return;
+
+        if (!s.paintModeEnabled)
         {
             EndStroke();
             return;
         }
 
-        if (!TryGetGroundHit(field.transform, out var hitWorld))
+        bool canApplyByShortcut = !s.useModifierShortcuts || IsPaintInputArmed(s, e);
+        if (!canApplyByShortcut)
+        {
+            EndStroke();
             return;
+        }
 
-        var e = Event.current;
+        if (!activeChunk.IsValid && s.mode == Mode.Paint && e.type == EventType.MouseDown && e.button == 0)
+        {
+            activeChunk = TryCreateAndBindChunk(scatterField, s.surfaceType, brushCenterLocal, s);
+            if (!activeChunk.IsValid)
+            {
+                EndStroke();
+                return;
+            }
+        }
 
-        if (s.useModifierShortcuts)
-            UpdateModeFromModifiers(s, e);
-
-        var brushCenterLocal = field.transform.InverseTransformPoint(hitWorld);
-
-        RebuildKeyMap(grassChunk);
-
-        DrawBrushGizmo(s.mode, hitWorld, s.radius);
-
-        if (s.previewCells && e.type == EventType.Repaint)
-            DrawCellPreview(field.transform, grassChunk, s, brushCenterLocal);
-
-        if (e.alt)
+        if (!activeChunk.IsValid)
+        {
+            EndStroke();
             return;
+        }
 
+        RebuildKeyMap(activeChunk);
         HandleUtility.AddDefaultControl(GUIUtility.GetControlID(FocusType.Passive));
 
         if (e.type == EventType.MouseDown && e.button == 0)
         {
-            BeginStroke(grassChunk);
-            ApplyBrushWithStep(field.transform, grassChunk, s, brushCenterLocal, force: true);
+            BeginStroke(activeChunk);
+            ApplyBrushWithStep(scatterField, activeChunk, s, brushCenterLocal, force: true);
             e.Use();
         }
         else if (e.type == EventType.MouseDrag && e.button == 0)
         {
-            ApplyBrushWithStep(field.transform, grassChunk, s, brushCenterLocal, force: false);
+            ApplyBrushWithStep(scatterField, activeChunk, s, brushCenterLocal, force: false);
             e.Use();
         }
         else if (e.type == EventType.MouseUp && e.button == 0)
@@ -361,12 +557,23 @@ public sealed class ScatterBrushToolWindow : EditorWindow
 
     private static void UpdateModeFromModifiers(BrushState s, Event e)
     {
-        if (e.control) s.mode = Mode.Scale;
-        else if (e.shift) s.mode = Mode.Erase;
-        else s.mode = Mode.Paint;
+        if (s.capsScaleMode) s.mode = Mode.Scale;
+        else if (e.control) s.mode = Mode.Erase;
+        else if (e.shift) s.mode = Mode.Paint;
     }
 
-    private void BeginStroke(ScatterChunkSO grass)
+    private static bool IsPaintInputArmed(BrushState s, Event e)
+    {
+        if (s == null)
+            return false;
+        if (!s.useModifierShortcuts)
+            return true;
+        if (s.capsScaleMode)
+            return true;
+        return e.shift || e.control;
+    }
+
+    private void BeginStroke(ActiveChunk chunk)
     {
         if (_strokeActive)
             return;
@@ -374,7 +581,8 @@ public sealed class ScatterBrushToolWindow : EditorWindow
         _strokeActive = true;
         _hasLastApplied = false;
 
-        Undo.RecordObject(grass, "Scatter Brush Stroke");
+        if (chunk.IsValid)
+            Undo.RecordObject(chunk.roomData, "Scatter Brush Stroke");
     }
 
     private void EndStroke()
@@ -383,8 +591,11 @@ public sealed class ScatterBrushToolWindow : EditorWindow
         _hasLastApplied = false;
     }
 
-    private void ApplyBrushWithStep(Transform fieldTransform, ScatterChunkSO grass, BrushState s, Vector3 brushCenterLocal, bool force)
+    private void ApplyBrushWithStep(ScatterField scatterField, ActiveChunk chunk, BrushState s, Vector3 brushCenterLocal, bool force)
     {
+        if (scatterField == null)
+            return;
+
         if (!force && _hasLastApplied)
         {
             float step = Mathf.Max(0.0001f, s.dragStepMeters);
@@ -392,22 +603,38 @@ public sealed class ScatterBrushToolWindow : EditorWindow
                 return;
         }
 
-        ApplyBrush(fieldTransform, grass, s, brushCenterLocal);
+        ApplyBrush(scatterField, chunk, s, brushCenterLocal);
 
         _lastAppliedLocal = brushCenterLocal;
         _hasLastApplied = true;
     }
 
-    private void ApplyBrush(Transform fieldTransform, ScatterChunkSO grass, BrushState s, Vector3 brushCenterLocal)
+    private void ApplyBrush(ScatterField scatterField, ActiveChunk activeChunk, BrushState s, Vector3 brushCenterLocal)
     {
-        var cells = grass.cells;
-        int cellsPerAxis = grass.CellsPerAxis;
+        if (!activeChunk.IsValid)
+            return;
+        Transform fieldTransform = scatterField.transform;
 
-        float half = grass.chunkSize * 0.5f;
-        float cellSize = grass.cellSize;
+        var surface = activeChunk.surface;
+        var chunk = activeChunk.chunk;
+        var cells = chunk.cells;
+        if (cells == null)
+        {
+            cells = new List<CellRecord>();
+            chunk.cells = cells;
+        }
+        int cellsPerAxis = surface.CellsPerAxis;
 
-        float bx = brushCenterLocal.x + half;
-        float bz = brushCenterLocal.z + half;
+        float chunkSize = Mathf.Max(0.0001f, surface.chunkSize);
+        float half = chunkSize * 0.5f;
+        float cellSize = Mathf.Max(0.0001f, surface.cellSize);
+        float chunkBaseX = chunk.chunkX * chunkSize;
+        float chunkBaseZ = chunk.chunkY * chunkSize;
+
+        float localInChunkX = brushCenterLocal.x - chunkBaseX;
+        float localInChunkZ = brushCenterLocal.z - chunkBaseZ;
+        float bx = localInChunkX + half;
+        float bz = localInChunkZ + half;
 
         int minCx = Mathf.FloorToInt((bx - s.radius) / cellSize);
         int maxCx = Mathf.FloorToInt((bx + s.radius) / cellSize);
@@ -429,11 +656,11 @@ public sealed class ScatterBrushToolWindow : EditorWindow
         for (int cy = minCy; cy <= maxCy; cy++)
         for (int cx = minCx; cx <= maxCx; cx++)
         {
-            uint seed = ScatterHash.MakeSeed(grass.EffectiveGlobalSeed, cx, cy);
+            uint seed = ScatterHash.MakeSeed(surface.EffectiveGlobalSeed, cx, cy);
             Vector2 jitter = ScatterHash.Jitter(seed, jitterRadius);
 
-            float centerX = (cx + 0.5f) * cellSize - half;
-            float centerZ = (cy + 0.5f) * cellSize - half;
+            float centerX = chunkBaseX + (cx + 0.5f) * cellSize - half;
+            float centerZ = chunkBaseZ + (cy + 0.5f) * cellSize - half;
             Vector3 local = new Vector3(centerX + jitter.x, 0f, centerZ + jitter.y);
 
             float dist = Vector2.Distance(new Vector2(local.x, local.z), new Vector2(brushCenterLocal.x, brushCenterLocal.z));
@@ -458,19 +685,23 @@ public sealed class ScatterBrushToolWindow : EditorWindow
                     {
                         int idx = _keyToIndex[key];
                         var rec = cells[idx];
-                        rec.variant = ScatterHash.Variant(seed, grass.EffectiveVariationCount);
+                        rec.variant = ScatterHash.Variant(seed, surface.EffectiveVariationCount);
+                        SampleProjectionData(scatterField, fieldTransform, local, out rec.localY, out rec.localNormal);
                         cells[idx] = rec;
                         changed = true;
                     }
                 }
                 else
                 {
+                    SampleProjectionData(scatterField, fieldTransform, local, out float localY, out Vector3 localNormal);
                     var rec = new CellRecord
                     {
                         cx = (ushort)cx,
                         cy = (ushort)cy,
-                        variant = ScatterHash.Variant(seed, grass.EffectiveVariationCount),
-                        scaleByte = CellRecord.Encode01(s.targetScale01)
+                        variant = ScatterHash.Variant(seed, surface.EffectiveVariationCount),
+                        scaleByte = CellRecord.Encode01(s.targetScale01),
+                        localY = localY,
+                        localNormal = localNormal
                     };
                     (addRecords ??= new List<CellRecord>(64)).Add(rec);
                     changed = true;
@@ -541,18 +772,21 @@ public sealed class ScatterBrushToolWindow : EditorWindow
 
         if (changed)
         {
-            grass.Touch();
-            EditorUtility.SetDirty(grass);
+            activeChunk.roomData.Touch();
+            EditorUtility.SetDirty(activeChunk.roomData);
             SceneView.RepaintAll();
         }
     }
 
-    private void RebuildKeyMap(ScatterChunkSO grass)
+    private void RebuildKeyMap(ActiveChunk chunk)
     {
         _keyToIndex.Clear();
 
-        var cells = grass.cells;
-        int cellsPerAxis = grass.CellsPerAxis;
+        if (!chunk.IsValid || chunk.chunk.cells == null)
+            return;
+
+        var cells = chunk.chunk.cells;
+        int cellsPerAxis = chunk.surface.CellsPerAxis;
 
         for (int i = 0; i < cells.Count; i++)
         {
@@ -561,18 +795,73 @@ public sealed class ScatterBrushToolWindow : EditorWindow
         }
     }
 
-    private static bool TryGetGroundHit(Transform fieldTransform, out Vector3 hitWorld)
+    private static bool TryGetBrushHit(Transform fieldTransform, BrushState state, out Vector3 hitWorld, out Vector3 hitNormal)
     {
         Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
+
+        if (state != null && state.useMeshSurfaceHit)
+        {
+            float maxSlopeDeg = Mathf.Clamp(state.maxSurfaceSlopeDeg, 0f, 89f);
+            float minUpDot = Mathf.Cos(maxSlopeDeg * Mathf.Deg2Rad);
+            float hitDistance = Mathf.Max(1f, state.meshHitDistance);
+
+            if (Physics.Raycast(ray, out RaycastHit hit, hitDistance, state.meshSurfaceLayerMask, QueryTriggerInteraction.Ignore))
+            {
+                float upDot = Vector3.Dot(hit.normal.normalized, Vector3.up);
+                if (upDot >= minUpDot)
+                {
+                    hitWorld = hit.point;
+                    hitNormal = hit.normal;
+                    return true;
+                }
+            }
+
+            if (!state.fallbackToFieldPlane)
+            {
+                hitWorld = default;
+                hitNormal = Vector3.up;
+                return false;
+            }
+        }
+
         Plane plane = new Plane(Vector3.up, new Vector3(0f, fieldTransform.position.y, 0f));
         if (plane.Raycast(ray, out float enter))
         {
             hitWorld = ray.GetPoint(enter);
+            hitNormal = Vector3.up;
             return true;
         }
 
         hitWorld = default;
+        hitNormal = Vector3.up;
         return false;
+    }
+
+    private static LayerMask LayerMaskField(string label, LayerMask selected)
+    {
+        var layers = InternalEditorUtility.layers;
+        int selectedMask = 0;
+        for (int i = 0; i < layers.Length; i++)
+        {
+            int layer = LayerMask.NameToLayer(layers[i]);
+            if (layer >= 0 && ((selected.value & (1 << layer)) != 0))
+                selectedMask |= 1 << i;
+        }
+
+        selectedMask = EditorGUILayout.MaskField(label, selectedMask, layers);
+
+        int mask = 0;
+        for (int i = 0; i < layers.Length; i++)
+        {
+            if ((selectedMask & (1 << i)) == 0)
+                continue;
+            int layer = LayerMask.NameToLayer(layers[i]);
+            if (layer >= 0)
+                mask |= 1 << layer;
+        }
+
+        selected.value = mask;
+        return selected;
     }
 
     private static void DrawBrushGizmo(Mode mode, Vector3 hitWorld, float radius)
@@ -588,14 +877,24 @@ public sealed class ScatterBrushToolWindow : EditorWindow
         Handles.DrawWireDisc(hitWorld, Vector3.up, radius);
     }
 
-    private static void DrawCellPreview(Transform fieldTransform, ScatterChunkSO grass, BrushState s, Vector3 brushCenterLocal)
+    private static void DrawCellPreview(Transform fieldTransform, ActiveChunk activeChunk, BrushState s, Vector3 brushCenterLocal)
     {
-        int cellsPerAxis = grass.CellsPerAxis;
-        float cellSize = grass.cellSize;
-        float half = grass.chunkSize * 0.5f;
+        if (!activeChunk.IsValid)
+            return;
 
-        float bx = brushCenterLocal.x + half;
-        float bz = brushCenterLocal.z + half;
+        var surface = activeChunk.surface;
+        var chunk = activeChunk.chunk;
+        int cellsPerAxis = surface.CellsPerAxis;
+        float cellSize = Mathf.Max(0.0001f, surface.cellSize);
+        float chunkSize = Mathf.Max(0.0001f, surface.chunkSize);
+        float half = chunkSize * 0.5f;
+        float chunkBaseX = chunk.chunkX * chunkSize;
+        float chunkBaseZ = chunk.chunkY * chunkSize;
+
+        float localInChunkX = brushCenterLocal.x - chunkBaseX;
+        float localInChunkZ = brushCenterLocal.z - chunkBaseZ;
+        float bx = localInChunkX + half;
+        float bz = localInChunkZ + half;
 
         int minCx = Mathf.FloorToInt((bx - s.radius) / cellSize);
         int maxCx = Mathf.FloorToInt((bx + s.radius) / cellSize);
@@ -624,11 +923,11 @@ public sealed class ScatterBrushToolWindow : EditorWindow
             if (drawn >= s.previewMax)
                 return;
 
-            uint seed = ScatterHash.MakeSeed(grass.EffectiveGlobalSeed, cx, cy);
+            uint seed = ScatterHash.MakeSeed(surface.EffectiveGlobalSeed, cx, cy);
             Vector2 jitter = ScatterHash.Jitter(seed, jitterRadius);
 
-            float centerX = (cx + 0.5f) * cellSize - half;
-            float centerZ = (cy + 0.5f) * cellSize - half;
+            float centerX = chunkBaseX + (cx + 0.5f) * cellSize - half;
+            float centerZ = chunkBaseZ + (cy + 0.5f) * cellSize - half;
 
             Vector3 local = new Vector3(centerX + jitter.x, 0f, centerZ + jitter.y);
 
@@ -644,6 +943,20 @@ public sealed class ScatterBrushToolWindow : EditorWindow
         }
     }
 
+    private static ActiveChunk TryCreateAndBindChunk(ScatterField field, ScatterSurfaceType surfaceType, Vector3 localPos, BrushState state)
+    {
+        if (field == null || state == null || !state.autoCreateChunkOnPaint || field.roomData == null)
+            return default;
+
+        Undo.RecordObject(field.roomData, "Auto Create Scatter Chunk");
+        var surface = field.roomData.GetOrCreateSurface(surfaceType);
+        var chunk = field.roomData.GetOrCreateChunkAtLocalPosition(surface, localPos);
+        field.roomData.Touch();
+        EditorUtility.SetDirty(field.roomData);
+        AssetDatabase.SaveAssets();
+        return new ActiveChunk(field.roomData, surface, chunk);
+    }
+
     private static Component ResolveFieldComponent(GameObject go)
     {
         if (go == null)
@@ -656,29 +969,302 @@ public sealed class ScatterBrushToolWindow : EditorWindow
         return null;
     }
 
-    private static ScatterChunkSO ResolveChunk(Component field, ScatterSurfaceType surfaceType)
+    private static ActiveChunk ResolveFirstChunk(Component field, ScatterSurfaceType surfaceType)
     {
         if (field == null)
-            return null;
+            return default;
+
         if (field is ScatterField scatterField)
         {
-            if (scatterField.primaryChunk != null && scatterField.primaryChunk.EffectiveSurfaceType == surfaceType)
-                return scatterField.primaryChunk;
-
-            if (scatterField.layers != null)
-            {
-                for (int i = 0; i < scatterField.layers.Count; i++)
-                {
-                    var layer = scatterField.layers[i];
-                    if (layer != null && layer.EffectiveSurfaceType == surfaceType)
-                        return layer;
-                }
-            }
+            RoomScatterDataSO.SurfaceLayerData surface = scatterField.ResolveSurface(surfaceType);
+            if (scatterField.roomData != null && surface != null && surface.chunks != null && surface.chunks.Count > 0 && surface.chunks[0] != null)
+                return new ActiveChunk(scatterField.roomData, surface, surface.chunks[0]);
         }
 
-        return null;
+        return default;
+    }
+
+    private static ActiveChunk ResolveChunkAtLocalPosition(ScatterField field, ScatterSurfaceType surfaceType, Vector3 localPos)
+    {
+        if (field == null || field.roomData == null)
+            return default;
+
+        RoomScatterDataSO.SurfaceLayerData surface = field.ResolveSurface(surfaceType);
+        if (surface == null)
+            return default;
+
+        RoomScatterDataSO.ChunkData chunk = field.roomData.FindChunkAtLocalPosition(surface, localPos);
+        if (chunk == null)
+            return default;
+
+        return new ActiveChunk(field.roomData, surface, chunk);
+    }
+
+    private static void DrawEditorPreviewIfNeeded(ScatterField field, SceneView view, BrushState state)
+    {
+        if (Event.current == null || Event.current.type != EventType.Repaint)
+            return;
+        if (Application.isPlaying)
+            return;
+        if (field == null || view == null || !state.toolEnabled || !state.showEditorPreview)
+            return;
+
+        if (!field.HasRenderConfig || field.sharedMaterial == null || field.variationMeshes == null || field.variationMeshes.Length == 0)
+            return;
+
+        s_previewChunkScratch.Clear();
+        field.CollectChunkRefs(s_previewChunkScratch);
+        if (s_previewChunkScratch.Count == 0)
+            return;
+
+        var mpb = new MaterialPropertyBlock();
+        if (field.overrideInteractionColorTuning)
+        {
+            mpb.SetFloat(IdPressColorWeight, field.pressColorWeight);
+            mpb.SetFloat(IdBendColorWeight, field.bendColorWeight);
+        }
+        // Editor preview must not read runtime instance-press buffers.
+        mpb.SetFloat(IdInstancePressCount, 0f);
+        mpb.SetFloat(IdPressCount, 0f);
+        mpb.SetFloat(IdBaseInstanceIndex, 0f);
+
+        Material previewMaterial = field.sharedMaterial;
+
+        for (int c = 0; c < s_previewChunkScratch.Count; c++)
+        {
+            RoomScatterDataSO.ChunkRef chunkRef = s_previewChunkScratch[c];
+            if (chunkRef.surface == null || chunkRef.chunk == null || chunkRef.chunk.cells == null || chunkRef.chunk.cells.Count == 0)
+                continue;
+
+            DrawChunkPreview(field, chunkRef, view.camera, previewMaterial, mpb);
+        }
+    }
+
+    private static bool EnsureToolPreviewManager(ScatterField field, BrushState state)
+    {
+        if (Application.isPlaying || field == null || state == null || !state.toolEnabled || !state.showEditorPreview)
+        {
+            CleanupPrefabStagePreviewManager();
+            return false;
+        }
+
+        Scene scene = field.gameObject.scene;
+        if (!scene.IsValid())
+        {
+            CleanupPrefabStagePreviewManager();
+            return false;
+        }
+
+        if (HasExternalRenderManagerForScene(scene))
+        {
+            CleanupPrefabStagePreviewManager();
+            return true;
+        }
+
+        int sceneHandle = scene.handle;
+        bool needsCreate =
+            s_prefabPreviewManagerGO == null ||
+            s_prefabPreviewManager == null ||
+            s_prefabPreviewTargetField != field ||
+            s_prefabPreviewStageHandle != sceneHandle;
+
+        if (needsCreate)
+        {
+            CleanupPrefabStagePreviewManager();
+            CreateToolPreviewManager(field, sceneHandle);
+        }
+
+        return s_prefabPreviewManager != null;
+    }
+
+    private static void CreateToolPreviewManager(ScatterField targetField, int sceneHandle)
+    {
+        if (targetField == null)
+            return;
+
+        s_prefabPreviewManagerGO = new GameObject("__ScatterPrefabPreviewManager");
+        s_prefabPreviewManagerGO.hideFlags = HideFlags.HideAndDontSave | HideFlags.NotEditable;
+        s_prefabPreviewManagerGO.transform.SetParent(targetField.transform, false);
+        s_prefabPreviewManager = s_prefabPreviewManagerGO.AddComponent<ScatterRenderManager>();
+        s_prefabPreviewManager.hideFlags = HideFlags.HideAndDontSave | HideFlags.NotEditable;
+        s_prefabPreviewTargetField = targetField;
+        s_prefabPreviewStageHandle = sceneHandle;
+
+        var so = new SerializedObject(s_prefabPreviewManager);
+        SerializedProperty autoDiscoverProp = so.FindProperty("autoDiscoverFields");
+        SerializedProperty autoDiscoverPlayProp = so.FindProperty("autoDiscoverDuringPlay");
+        SerializedProperty refreshIntervalProp = so.FindProperty("refreshInterval");
+        SerializedProperty fieldsProp = so.FindProperty("fields");
+
+        if (autoDiscoverProp != null) autoDiscoverProp.boolValue = false;
+        if (autoDiscoverPlayProp != null) autoDiscoverPlayProp.boolValue = false;
+        if (refreshIntervalProp != null) refreshIntervalProp.floatValue = 1f;
+        if (fieldsProp != null)
+        {
+            fieldsProp.ClearArray();
+            fieldsProp.InsertArrayElementAtIndex(0);
+            fieldsProp.GetArrayElementAtIndex(0).objectReferenceValue = targetField;
+        }
+
+        so.ApplyModifiedPropertiesWithoutUndo();
+        s_prefabPreviewManager.RefreshFieldsNow();
+    }
+
+    private static void CleanupPrefabStagePreviewManager()
+    {
+        if (s_prefabPreviewManagerGO != null)
+            UnityEngine.Object.DestroyImmediate(s_prefabPreviewManagerGO);
+
+        s_prefabPreviewManagerGO = null;
+        s_prefabPreviewManager = null;
+        s_prefabPreviewTargetField = null;
+        s_prefabPreviewStageHandle = -1;
+    }
+
+    private static bool HasExternalRenderManagerForScene(Scene scene)
+    {
+#if UNITY_2023_1_OR_NEWER
+        var managers = UnityEngine.Object.FindObjectsByType<ScatterRenderManager>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+#else
+        var managers = UnityEngine.Object.FindObjectsOfType<ScatterRenderManager>();
+#endif
+        if (managers == null || managers.Length == 0)
+            return false;
+
+        for (int i = 0; i < managers.Length; i++)
+        {
+            ScatterRenderManager manager = managers[i];
+            if (manager == null)
+                continue;
+            if (manager == s_prefabPreviewManager)
+                continue;
+            if (manager.gameObject.scene == scene)
+                return true;
+        }
+
+        return false;
+    }
+
+    private static void OnEditorUpdate()
+    {
+        BrushState state = BrushState.instance;
+        if (state == null || !state.toolEnabled || !state.showEditorPreview)
+            return;
+
+        int targetFps = (int)state.forcePreviewFrameRate;
+        if (targetFps <= 0)
+            return;
+
+        double now = EditorApplication.timeSinceStartup;
+        double interval = 1.0 / Math.Max(1, targetFps);
+        if (now < s_nextSceneViewRepaintTime)
+            return;
+
+        s_nextSceneViewRepaintTime = now + interval;
+        SceneView.RepaintAll();
+    }
+
+    private static void DrawChunkPreview(ScatterField field, RoomScatterDataSO.ChunkRef chunkRef, Camera cam, Material previewMaterial, MaterialPropertyBlock mpb)
+    {
+        if (field == null || chunkRef.surface == null || chunkRef.chunk == null || cam == null)
+            return;
+
+        RoomScatterDataSO.SurfaceLayerData surface = chunkRef.surface;
+        RoomScatterDataSO.ChunkData chunk = chunkRef.chunk;
+        int variationCount = Mathf.Clamp(surface.EffectiveVariationCount, 1, Mathf.Min(16, field.variationMeshes.Length));
+        if (variationCount <= 0)
+            return;
+
+        float chunkSize = Mathf.Max(0.0001f, surface.chunkSize);
+        float half = chunkSize * 0.5f;
+        float cellSize = Mathf.Max(0.0001f, surface.cellSize);
+        uint globalSeed = surface.EffectiveGlobalSeed;
+        float scaleMin = surface.EffectiveScaleMin;
+        float scaleMax = surface.EffectiveScaleMax;
+        float chunkBaseX = chunk.chunkX * chunkSize;
+        float chunkBaseZ = chunk.chunkY * chunkSize;
+        float jitterRadius = cellSize * 0.35f;
+
+        for (int variant = 0; variant < variationCount; variant++)
+        {
+            Mesh mesh = field.variationMeshes[Mathf.Min(variant, field.variationMeshes.Length - 1)];
+            if (mesh == null)
+                continue;
+
+            int count = 0;
+            List<CellRecord> cells = chunk.cells;
+            for (int i = 0; i < cells.Count; i++)
+            {
+                CellRecord rec = cells[i];
+                int recVariant = Mathf.Clamp(rec.variant, 0, variationCount - 1);
+                if (recVariant != variant)
+                    continue;
+
+                uint seed = ScatterHash.MakeSeed(globalSeed, rec.cx, rec.cy);
+                Vector2 jitter = ScatterHash.Jitter(seed, jitterRadius);
+                float x = chunkBaseX + ((int)rec.cx + 0.5f) * cellSize - half + jitter.x;
+                float z = chunkBaseZ + ((int)rec.cy + 0.5f) * cellSize - half + jitter.y;
+                float scale = rec.Scale(scaleMin, scaleMax);
+
+                Vector3 localPos = new Vector3(x, rec.localY, z);
+                Vector3 worldPos = field.transform.TransformPoint(localPos);
+                Quaternion worldRot = Quaternion.identity;
+                if (field.projectToStaticSurface && field.alignToSurfaceNormal)
+                {
+                    Vector3 localNormal = rec.localNormal.sqrMagnitude > 1e-6f ? rec.localNormal.normalized : Vector3.up;
+                    Vector3 normalWorld = field.transform.TransformDirection(localNormal).normalized;
+                    Vector3 tangent = Vector3.ProjectOnPlane(field.transform.forward, normalWorld);
+                    if (tangent.sqrMagnitude < 1e-6f)
+                        tangent = Vector3.ProjectOnPlane(Vector3.forward, normalWorld);
+                    if (tangent.sqrMagnitude < 1e-6f)
+                        tangent = Vector3.right;
+                    worldRot = Quaternion.LookRotation(tangent.normalized, normalWorld);
+                }
+
+                s_previewMatrices[count++] = Matrix4x4.TRS(worldPos, worldRot, Vector3.one * scale);
+
+                if (count >= s_previewMatrices.Length)
+                {
+                    Graphics.DrawMeshInstanced(
+                        mesh, 0, previewMaterial, s_previewMatrices, count, mpb,
+                        ShadowCastingMode.Off, false, field.gameObject.layer, cam);
+                    count = 0;
+                }
+            }
+
+            if (count > 0)
+            {
+                Graphics.DrawMeshInstanced(
+                    mesh, 0, previewMaterial, s_previewMatrices, count, mpb,
+                    ShadowCastingMode.Off, false, field.gameObject.layer, cam);
+            }
+        }
+    }
+
+
+    private static void SampleProjectionData(ScatterField field, Transform fieldTransform, Vector3 localPos, out float localY, out Vector3 localNormal)
+    {
+        localY = 0f;
+        localNormal = Vector3.up;
+        if (field == null || !field.projectToStaticSurface)
+            return;
+
+        Vector3 baseWorld = fieldTransform.TransformPoint(new Vector3(localPos.x, 0f, localPos.z));
+        float rayStartHeight = Mathf.Max(0.1f, field.projectionRayStartHeight);
+        float rayDistance = Mathf.Max(0.1f, field.projectionRayDistance);
+        Vector3 rayOrigin = baseWorld + Vector3.up * rayStartHeight;
+
+        if (!Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, rayDistance, field.projectionLayerMask, QueryTriggerInteraction.Ignore))
+            return;
+
+        Vector3 projectedLocal = fieldTransform.InverseTransformPoint(hit.point);
+        localY = projectedLocal.y;
+        localNormal = fieldTransform.InverseTransformDirection(hit.normal).normalized;
     }
 }
 #endif
+
+
+
 
 

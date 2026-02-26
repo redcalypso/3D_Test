@@ -196,7 +196,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3f64367df36c4e84a74d538712b517f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ScatterField
-  primaryChunk: {fileID: 11400000, guid: 626ccf7bd07fd2e4e952be305eaf32d8, type: 2}
 --- !u!1 &824360477
 GameObject:
   m_ObjectHideFlags: 0

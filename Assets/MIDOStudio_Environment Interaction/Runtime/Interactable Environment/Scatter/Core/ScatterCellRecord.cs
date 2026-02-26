@@ -8,6 +8,8 @@ public struct CellRecord
     public ushort cy;
     public byte variant;
     public byte scaleByte;
+    public float localY;
+    public Vector3 localNormal;
 
     public static int Key(int cx, int cy, int cellsPerAxis) => cy * cellsPerAxis + cx;
     public int Key(int cellsPerAxis) => Key(cx, cy, cellsPerAxis);

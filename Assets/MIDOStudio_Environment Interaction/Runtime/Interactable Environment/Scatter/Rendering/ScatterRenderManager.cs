@@ -13,8 +13,6 @@ public sealed class ScatterRenderManager : MonoBehaviour
     [SerializeField, Min(0.1f)] private float refreshInterval = 1.0f;
 
     [Header("Render")]
-    [SerializeField] private bool includeLayerChunks = true;
-
     [Header("Debug")]
     [SerializeField] private int debugFieldCount;
     [SerializeField] private int debugFieldSourceCount;
@@ -23,6 +21,7 @@ public sealed class ScatterRenderManager : MonoBehaviour
     [SerializeField] private int debugSubmittedInstances;
 
     [SerializeField] private List<ScatterField> fields = new List<ScatterField>(128);
+    private readonly List<RoomScatterDataSO.ChunkRef> _fieldChunkScratch = new List<RoomScatterDataSO.ChunkRef>(64);
 
     private double _nextRefreshTime;
     private readonly Dictionary<BucketKey, DrawBucket> _buckets = new Dictionary<BucketKey, DrawBucket>(64);
@@ -110,17 +109,27 @@ public sealed class ScatterRenderManager : MonoBehaviour
     private struct FieldSourceKey : IEquatable<FieldSourceKey>
     {
         public Transform root;
-        public ScatterChunkSO chunk;
+        public RoomScatterDataSO roomData;
+        public ScatterSurfaceType surfaceType;
+        public int chunkX;
+        public int chunkY;
 
-        public FieldSourceKey(Transform root, ScatterChunkSO chunk)
+        public FieldSourceKey(Transform root, RoomScatterDataSO roomData, ScatterSurfaceType surfaceType, int chunkX, int chunkY)
         {
             this.root = root;
-            this.chunk = chunk;
+            this.roomData = roomData;
+            this.surfaceType = surfaceType;
+            this.chunkX = chunkX;
+            this.chunkY = chunkY;
         }
 
         public bool Equals(FieldSourceKey other)
         {
-            return ReferenceEquals(root, other.root) && ReferenceEquals(chunk, other.chunk);
+            return ReferenceEquals(root, other.root) &&
+                   ReferenceEquals(roomData, other.roomData) &&
+                   surfaceType == other.surfaceType &&
+                   chunkX == other.chunkX &&
+                   chunkY == other.chunkY;
         }
 
         public override bool Equals(object obj)
@@ -134,7 +143,10 @@ public sealed class ScatterRenderManager : MonoBehaviour
             {
                 int h = 17;
                 h = h * 31 + (root != null ? root.GetHashCode() : 0);
-                h = h * 31 + (chunk != null ? chunk.GetHashCode() : 0);
+                h = h * 31 + (roomData != null ? roomData.GetHashCode() : 0);
+                h = h * 31 + (int)surfaceType;
+                h = h * 31 + chunkX;
+                h = h * 31 + chunkY;
                 return h;
             }
         }
@@ -144,7 +156,9 @@ public sealed class ScatterRenderManager : MonoBehaviour
     {
         public ScatterField field;
         public Transform root;
-        public ScatterChunkSO chunk;
+        public RoomScatterDataSO roomData;
+        public RoomScatterDataSO.SurfaceLayerData surface;
+        public RoomScatterDataSO.ChunkData chunk;
         public readonly List<Matrix4x4>[] lists = new List<Matrix4x4>[16];
         public CellRecord[] sortedCellsScratch;
         public int currentSettingsHash;
@@ -222,31 +236,29 @@ public sealed class ScatterRenderManager : MonoBehaviour
                 continue;
 
             fields.Add(field);
-            RegisterFieldSource(field, field.primaryChunk);
-
-            if (!includeLayerChunks || field.layers == null)
-                continue;
-
-            for (int l = 0; l < field.layers.Count; l++)
-            {
-                ScatterChunkSO layerChunk = field.layers[l];
-                if (layerChunk == null || ReferenceEquals(layerChunk, field.primaryChunk))
-                    continue;
-
-                RegisterFieldSource(field, layerChunk);
-            }
+            _fieldChunkScratch.Clear();
+            field.CollectChunkRefs(_fieldChunkScratch);
+            for (int c = 0; c < _fieldChunkScratch.Count; c++)
+                RegisterFieldSource(field, _fieldChunkScratch[c]);
         }
 
         debugFieldCount = fields.Count;
         debugFieldSourceCount = _activeFieldSources.Count;
     }
 
-    private void RegisterFieldSource(ScatterField field, ScatterChunkSO chunk)
+    private void RegisterFieldSource(ScatterField field, RoomScatterDataSO.ChunkRef chunkRef)
     {
-        if (field == null || chunk == null || !field.HasRenderConfig)
+        if (field == null || !field.HasRenderConfig)
+            return;
+        if (field.roomData == null || chunkRef.surface == null || chunkRef.chunk == null)
             return;
 
-        FieldSourceKey key = new FieldSourceKey(field.transform, chunk);
+        FieldSourceKey key = new FieldSourceKey(
+            field.transform,
+            field.roomData,
+            chunkRef.surface.surfaceType,
+            chunkRef.chunk.chunkX,
+            chunkRef.chunk.chunkY);
         if (!_fieldStates.TryGetValue(key, out FieldSourceState state))
         {
             state = new FieldSourceState();
@@ -255,7 +267,9 @@ public sealed class ScatterRenderManager : MonoBehaviour
 
         state.field = field;
         state.root = field.transform;
-        state.chunk = chunk;
+        state.roomData = field.roomData;
+        state.surface = chunkRef.surface;
+        state.chunk = chunkRef.chunk;
         state.listsDirty = true;
         state.hasCachedBounds = false;
         _activeFieldSources.Add(state);
@@ -280,8 +294,9 @@ public sealed class ScatterRenderManager : MonoBehaviour
         {
             FieldSourceState state = _activeFieldSources[s];
             ScatterField field = state.field;
-            ScatterChunkSO chunk = state.chunk;
-            if (field == null || chunk == null || state.root == null)
+            RoomScatterDataSO.SurfaceLayerData surface = state.surface;
+            RoomScatterDataSO.ChunkData chunk = state.chunk;
+            if (field == null || surface == null || chunk == null || state.root == null)
                 continue;
             if (!field.HasRenderConfig || field.sharedMaterial == null)
                 continue;
@@ -291,8 +306,9 @@ public sealed class ScatterRenderManager : MonoBehaviour
             if (!TryPrepareFieldSourceForCamera(state, field, cam, out int lodStride))
                 continue;
 
-            int variantCount = Mathf.Min(chunk.EffectiveVariationCount, state.lists.Length);
-            bool useInstanceCull = field.enableInstanceCulling;
+            int variantCount = Mathf.Min(surface.EffectiveVariationCount, state.lists.Length);
+            bool disableCullAndLodInEditorSceneView = !Application.isPlaying && cam.cameraType == CameraType.SceneView;
+            bool useInstanceCull = !disableCullAndLodInEditorSceneView && field.enableInstanceCulling;
             for (int v = 0; v < variantCount; v++)
             {
                 List<Matrix4x4> list = state.lists[v];
@@ -355,6 +371,13 @@ public sealed class ScatterRenderManager : MonoBehaviour
 
         EnsureFieldListsUpToDate(state);
 
+        // In edit-mode SceneView, show full data without LOD/culling for authoring.
+        if (!Application.isPlaying && cam.cameraType == CameraType.SceneView)
+        {
+            lodStride = 1;
+            return true;
+        }
+
         Bounds bounds = GetFieldChunkWorldBounds(state, field);
         if (!GeometryUtility.TestPlanesAABB(s_frustumPlanes, bounds))
             return false;
@@ -387,7 +410,7 @@ public sealed class ScatterRenderManager : MonoBehaviour
 
         BuildFieldListsDeterministic(state);
         state.currentSettingsHash = ComputeFieldSettingsHash(state);
-        state.currentDataVersion = state.chunk != null ? state.chunk.DataVersion : -1;
+        state.currentDataVersion = state.roomData != null ? state.roomData.DataVersion : -1;
         state.listsDirty = false;
         if (state.root != null)
             state.root.hasChanged = false;
@@ -399,7 +422,7 @@ public sealed class ScatterRenderManager : MonoBehaviour
             return false;
         if (state.listsDirty)
             return true;
-        if (state.chunk == null)
+        if (state.surface == null || state.chunk == null || state.roomData == null)
             return false;
         if (!Application.isPlaying)
             return true;
@@ -407,14 +430,29 @@ public sealed class ScatterRenderManager : MonoBehaviour
             return true;
         if (ComputeFieldSettingsHash(state) != state.currentSettingsHash)
             return true;
-        return state.chunk.DataVersion != state.currentDataVersion;
+        return state.roomData.DataVersion != state.currentDataVersion;
     }
 
     private static int ComputeFieldSettingsHash(FieldSourceState state)
     {
-        if (state == null || state.chunk == null)
+        if (state == null || state.surface == null || state.chunk == null)
             return 0;
-        return state.chunk.ComputeEffectiveSettingsHash();
+        unchecked
+        {
+            int h = state.surface.ComputeEffectiveSettingsHash();
+            h = h * 31 + state.chunk.chunkX;
+            h = h * 31 + state.chunk.chunkY;
+            ScatterField field = state.field;
+            if (field != null)
+            {
+                h = h * 31 + (field.projectToStaticSurface ? 1 : 0);
+                h = h * 31 + field.projectionLayerMask.value;
+                h = h * 31 + field.projectionRayStartHeight.GetHashCode();
+                h = h * 31 + field.projectionRayDistance.GetHashCode();
+                h = h * 31 + (field.alignToSurfaceNormal ? 1 : 0);
+            }
+            return h;
+        }
     }
 
     private static void BuildFieldListsDeterministic(FieldSourceState state)
@@ -422,16 +460,20 @@ public sealed class ScatterRenderManager : MonoBehaviour
         for (int i = 0; i < state.lists.Length; i++)
             state.lists[i].Clear();
 
-        if (state.chunk == null || state.root == null)
+        if (state.surface == null || state.chunk == null || state.root == null)
             return;
 
-        ScatterChunkSO chunk = state.chunk;
-        float half = chunk.chunkSize * 0.5f;
-        float cellSize = chunk.cellSize;
-        int variationCount = chunk.EffectiveVariationCount;
-        uint globalSeed = chunk.EffectiveGlobalSeed;
-        float scaleMin = chunk.EffectiveScaleMin;
-        float scaleMax = chunk.EffectiveScaleMax;
+        RoomScatterDataSO.SurfaceLayerData surface = state.surface;
+        RoomScatterDataSO.ChunkData chunk = state.chunk;
+        float chunkSize = Mathf.Max(0.0001f, surface.chunkSize);
+        float half = chunkSize * 0.5f;
+        float cellSize = Mathf.Max(0.0001f, surface.cellSize);
+        int variationCount = surface.EffectiveVariationCount;
+        uint globalSeed = surface.EffectiveGlobalSeed;
+        float scaleMin = surface.EffectiveScaleMin;
+        float scaleMax = surface.EffectiveScaleMax;
+        float chunkBaseX = chunk.chunkX * chunkSize;
+        float chunkBaseZ = chunk.chunkY * chunkSize;
 
         List<CellRecord> src = chunk.cells;
         int n = src != null ? src.Count : 0;
@@ -449,15 +491,35 @@ public sealed class ScatterRenderManager : MonoBehaviour
             uint seed = ScatterHash.MakeSeed(globalSeed, rec.cx, rec.cy);
             Vector2 jitter = ScatterHash.Jitter(seed, cellSize * 0.35f);
 
-            float x = ((int)rec.cx + 0.5f) * cellSize - half + jitter.x;
-            float z = ((int)rec.cy + 0.5f) * cellSize - half + jitter.y;
+            float x = chunkBaseX + ((int)rec.cx + 0.5f) * cellSize - half + jitter.x;
+            float z = chunkBaseZ + ((int)rec.cy + 0.5f) * cellSize - half + jitter.y;
             float scale = rec.Scale(scaleMin, scaleMax);
 
-            Vector3 worldPos = state.root.TransformPoint(new Vector3(x, 0f, z));
+            bool useProjectedPlacement = state.field != null && state.field.projectToStaticSurface;
+            float localY = useProjectedPlacement ? rec.localY : 0f;
+            Vector3 localPos = new Vector3(x, localY, z);
+            Vector3 worldPos = state.root.TransformPoint(localPos);
+            Quaternion worldRot = Quaternion.identity;
+            if (useProjectedPlacement && state.field.alignToSurfaceNormal)
+                worldRot = ComputeProjectedRotation(state.root, rec.localNormal);
             int variant = Mathf.Clamp(rec.variant, 0, variationCount - 1);
             if (variant < state.lists.Length)
-                state.lists[variant].Add(Matrix4x4.TRS(worldPos, Quaternion.identity, Vector3.one * scale));
+                state.lists[variant].Add(Matrix4x4.TRS(worldPos, worldRot, Vector3.one * scale));
         }
+    }
+
+    private static Quaternion ComputeProjectedRotation(Transform root, Vector3 localNormal)
+    {
+        Vector3 normalLocal = localNormal.sqrMagnitude > 1e-6f ? localNormal.normalized : Vector3.up;
+        Vector3 normalWorld = root != null ? root.TransformDirection(normalLocal).normalized : normalLocal;
+        Vector3 forward = root != null ? root.forward : Vector3.forward;
+        Vector3 tangent = Vector3.ProjectOnPlane(forward, normalWorld);
+        if (tangent.sqrMagnitude < 1e-6f)
+            tangent = Vector3.ProjectOnPlane(Vector3.forward, normalWorld);
+        if (tangent.sqrMagnitude < 1e-6f)
+            tangent = Vector3.right;
+
+        return Quaternion.LookRotation(tangent.normalized, normalWorld);
     }
 
     private static Bounds GetFieldChunkWorldBounds(FieldSourceState state, ScatterField field)
@@ -466,8 +528,8 @@ public sealed class ScatterRenderManager : MonoBehaviour
         if (state.hasCachedBounds && hash == state.cachedBoundsHash)
             return state.cachedWorldBounds;
 
-        float half = Mathf.Max(0.001f, state.chunk != null ? state.chunk.chunkSize * 0.5f : 0.5f);
-        float scaleMax = state.chunk != null ? Mathf.Max(1f, state.chunk.EffectiveScaleMax) : 1f;
+        float half = Mathf.Max(0.001f, state.surface != null ? state.surface.chunkSize * 0.5f : 0.5f);
+        float scaleMax = state.surface != null ? Mathf.Max(1f, state.surface.EffectiveScaleMax) : 1f;
 
         float meshExtentXZ = 0f;
         float meshExtentY = 0f;
@@ -488,7 +550,10 @@ public sealed class ScatterRenderManager : MonoBehaviour
         float radiusXZ = half * 1.41421356f + meshExtentXZ * scaleMax + 0.5f;
         float extentY = meshExtentY * scaleMax + 2.0f;
 
-        Vector3 center = state.root != null ? state.root.TransformPoint(Vector3.zero) : Vector3.zero;
+        Vector3 localCenter = Vector3.zero;
+        if (state.chunk != null && state.surface != null)
+            localCenter = new Vector3(state.chunk.chunkX * state.surface.chunkSize, 0f, state.chunk.chunkY * state.surface.chunkSize);
+        Vector3 center = state.root != null ? state.root.TransformPoint(localCenter) : Vector3.zero;
         Vector3 extents = new Vector3(radiusXZ, extentY, radiusXZ);
 
         state.cachedWorldBounds = new Bounds(center, extents * 2f);
@@ -502,9 +567,11 @@ public sealed class ScatterRenderManager : MonoBehaviour
         unchecked
         {
             int h = 17;
-            h = h * 31 + (state.chunk != null ? state.chunk.GetHashCode() : 0);
-            h = h * 31 + (state.chunk != null ? state.chunk.chunkSize.GetHashCode() : 0);
-            h = h * 31 + (state.chunk != null ? state.chunk.EffectiveScaleMax.GetHashCode() : 0);
+            h = h * 31 + (state.surface != null ? state.surface.GetHashCode() : 0);
+            h = h * 31 + (state.chunk != null ? state.chunk.chunkX : 0);
+            h = h * 31 + (state.chunk != null ? state.chunk.chunkY : 0);
+            h = h * 31 + (state.surface != null ? state.surface.chunkSize.GetHashCode() : 0);
+            h = h * 31 + (state.surface != null ? state.surface.EffectiveScaleMax.GetHashCode() : 0);
             h = h * 31 + (state.root != null ? state.root.localToWorldMatrix.GetHashCode() : 0);
             if (field.variationMeshes != null)
             {

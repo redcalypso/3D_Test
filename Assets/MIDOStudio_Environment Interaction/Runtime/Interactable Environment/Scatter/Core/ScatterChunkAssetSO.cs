@@ -1,7 +1,6 @@
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Trolls/Scatter/Chunks/Scatter Chunk", fileName = "ScatterChunk")]
+[System.Obsolete("Legacy ScatterChunkAssetSO is no longer used. Use RoomScatterDataSO internal chunk data.")]
 public sealed class ScatterChunkAssetSO : ScatterChunkSO
 {
-    // Concrete asset type so ScatterField can reference chunk assets directly.
 }

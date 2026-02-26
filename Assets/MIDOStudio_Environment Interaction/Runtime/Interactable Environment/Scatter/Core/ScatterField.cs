@@ -4,15 +4,19 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class ScatterField : MonoBehaviour
 {
-    [Header("Primary Layer")]
-    public ScatterChunkSO primaryChunk;
-
-    [Header("Optional Layers")]
-    public List<ScatterChunkSO> layers = new();
+    [Header("Room Data Source")]
+    public RoomScatterDataSO roomData;
 
     [Header("Render Source")]
     public Mesh[] variationMeshes;
     public Material sharedMaterial;
+
+    [Header("Surface Projection")]
+    public bool projectToStaticSurface = false;
+    public LayerMask projectionLayerMask = ~0;
+    [Min(0.1f)] public float projectionRayStartHeight = 50f;
+    [Min(0.1f)] public float projectionRayDistance = 200f;
+    public bool alignToSurfaceNormal = false;
 
     [Header("Render Options")]
     public bool renderInSceneViewWhilePlaying = false;
@@ -32,4 +36,22 @@ public sealed class ScatterField : MonoBehaviour
         sharedMaterial != null &&
         variationMeshes != null &&
         variationMeshes.Length > 0;
+
+    public void CollectChunkRefs(List<RoomScatterDataSO.ChunkRef> dst)
+    {
+        if (dst == null)
+            return;
+
+        dst.Clear();
+        if (roomData == null)
+            return;
+        roomData.CollectChunkRefs(dst);
+    }
+
+    public RoomScatterDataSO.SurfaceLayerData ResolveSurface(ScatterSurfaceType surfaceType)
+    {
+        if (roomData == null)
+            return null;
+        return roomData.FindSurface(surfaceType);
+    }
 }

@@ -1,0 +1,74 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &3535592997029233618
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4421915924233958681}
+  - component: {fileID: 7252234008431072509}
+  m_Layer: 0
+  m_Name: InteractionMapBaker
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4421915924233958681
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3535592997029233618}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7252234008431072509
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3535592997029233618}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3863a68c27210c14a858082769b81446, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::InteractionMapBakerV2
+  _target: {fileID: 0}
+  _globalRelaxationShader: {fileID: 4800000, guid: 5a2d749233b81d14b98bf38aa3887f19, type: 3}
+  _stampShader: {fileID: 4800000, guid: 71d892028b1454b459b383e81c8b1522, type: 3}
+  _interactionRT: {fileID: 8400000, guid: fa55089d54e9ad741bd0691296f1c2d9, type: 2}
+  _orthoSize: 50
+  _useLateUpdate: 1
+  _cameraDataUpdateHz: 60
+  _snapToPixelGrid: 1
+  _skipWhenSnapUnchanged: 1
+  _eventDrivenTick: 1
+  _dirtyFrames: 2
+  _autoDirtyOnMove: 1
+  _autoDirtyFramesOnMove: 2
+  _maxStampsPerTick: 32
+  _decayRate: 3
+  _dtCap: 0.25
+  _runRelaxationWhenIdle: 1
+  _neutralColor: {r: 0.5, g: 0.5, b: 0, a: 0}
+  _rtResolution: 256
+  _rtFormat: 2
+  _allowFormatFallbackToARGB32: 1
+  _rtFilter: 0
+  _rtWrap: 1
+  _rtGlobalName: _InteractionRT
+  _camPosXZGlobalName: _InteractionCamPosXZ
+  _camParamsGlobalName: _InteractionCamParams
+  _uvOffsetGlobalName: _InteractionUVOffset
+  _debugQueueLength: 0
