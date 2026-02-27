@@ -1,8 +1,8 @@
 {
   "name": "com.midostudio.eis-system",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "MIDOStudio EIS System",
-  "description": "Environment Interaction System package including runtime interaction map baking, scatter runtime, editor tools, and samples.",
+  "description": "Environment Interaction System package including runtime interaction map baking, scatter runtime, editor tools, and samples.\n\n1.0.1 Fix : Camera Direction Based Billboard Added",
   "unity": "6000.0",
   "author": {
     "name": "MIDOStudio"

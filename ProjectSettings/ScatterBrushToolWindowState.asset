@@ -16,7 +16,7 @@ MonoBehaviour:
   surfaceType: 0
   toolEnabled: 1
   useModifierShortcuts: 1
-  paintModeEnabled: 1
+  paintModeEnabled: 0
   capsScaleMode: 0
   autoCreateChunkOnPaint: 1
   showEditorPreview: 1
@@ -28,7 +28,7 @@ MonoBehaviour:
   meshHitDistance: 500
   fallbackToFieldPlane: 1
   mode: 0
-  radius: 10
+  radius: 2
   density: 1
   strength: 1
   scaleMode: 0
@@ -37,5 +37,5 @@ MonoBehaviour:
   rerollOnPaint: 0
   dragStepMeters: 0.25
   previewCells: 1
-  previewMax: 3000
+  previewMax: 600
   forcePreviewFrameRate: 0
