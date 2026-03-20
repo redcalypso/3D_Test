@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 99c5a71553d1a5543b379b5af3d553e5
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 249946
+  packageName: YSA Toon (Anime/Toon Shader)
+  packageVersion: 1.0
+  assetPath: Assets/YSA Toon/Examples/UnityChan/Scripts/Rotator.cs
+  uploadId: 571076

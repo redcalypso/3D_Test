@@ -1,15 +1,13 @@
 fileFormatVersion: 2
-guid: 7353f19da5d274e4db20112d2c91407d
+guid: 9bec51fc47eda6047ba5cc01addbf46f
 NativeFormatImporter:
-  externalObjects: {}
-  mainObjectFileID: 2100000
   userData: 
   assetBundleName: 
   assetBundleVariant: 
 AssetOrigin:
   serializedVersion: 1
-  productId: 281737
-  packageName: Anime Shading Plus
-  packageVersion: 1.3
+  productId: 249946
+  packageName: YSA Toon (Anime/Toon Shader)
+  packageVersion: 1.0
   assetPath: Assets/ASP/Demo/Models/unity-chan!/Materials/eyebase.mat
-  uploadId: 813382
+  uploadId: 571076

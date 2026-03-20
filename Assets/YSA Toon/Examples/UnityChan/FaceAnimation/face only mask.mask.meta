@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: c6893d99d338240cd834967aa6448379
+labels:
+- UnityChan
+NativeFormatImporter:
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 249946
+  packageName: YSA Toon (Anime/Toon Shader)
+  packageVersion: 1.0
+  assetPath: Assets/YSA Toon/Examples/UnityChan/FaceAnimation/face only mask.mask
+  uploadId: 571076

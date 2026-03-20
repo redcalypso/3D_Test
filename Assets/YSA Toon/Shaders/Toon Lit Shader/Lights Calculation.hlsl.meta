@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: 951dfcbedbeb76141b76878ae16ff2e5
+ShaderIncludeImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 249946
+  packageName: YSA Toon (Anime/Toon Shader)
+  packageVersion: 1.0
+  assetPath: Assets/YSA Toon/Shaders/Toon Lit Shader/Lights Calculation.hlsl
+  uploadId: 571076

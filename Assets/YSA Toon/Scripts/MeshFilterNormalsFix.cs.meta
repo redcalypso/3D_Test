@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 069d292b15ea344479b015b707f17615
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 249946
+  packageName: YSA Toon (Anime/Toon Shader)
+  packageVersion: 1.0
+  assetPath: Assets/YSA Toon/Scripts/MeshFilterNormalsFix.cs
+  uploadId: 571076

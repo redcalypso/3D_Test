@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 5b5e2fcbddc435c4694461caebe9b6f0
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 249946
+  packageName: YSA Toon (Anime/Toon Shader)
+  packageVersion: 1.0
+  assetPath: Assets/YSA Toon/Examples/Outline Materials/Outline Vertex Colors.mat
+  uploadId: 571076

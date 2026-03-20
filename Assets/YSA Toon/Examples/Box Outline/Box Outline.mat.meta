@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 74e2ffab9093ffa4da4f4e76b018ab4a
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 249946
+  packageName: YSA Toon (Anime/Toon Shader)
+  packageVersion: 1.0
+  assetPath: Assets/YSA Toon/Examples/Box Outline/Box Outline.mat
+  uploadId: 571076
