@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: b0e106752d7e2a3478dca9512273649e
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 170520
+  packageName: Toon Water URP
+  packageVersion: 1.19
+  assetPath: Assets/Toon Water URP/Underwater Post-Processing/Underwater Effect Post-process
+    Volume Profile.asset
+  uploadId: 513463

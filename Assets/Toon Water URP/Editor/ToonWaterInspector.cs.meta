@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: a8ddd93389a23c348983dea8a49dde09
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 170520
+  packageName: Toon Water URP
+  packageVersion: 1.19
+  assetPath: Assets/Toon Water URP/Editor/ToonWaterInspector.cs
+  uploadId: 513463

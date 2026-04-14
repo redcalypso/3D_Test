@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: 3185bfa416cb5494583fc75d07758f01
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 170520
+  packageName: Toon Water URP
+  packageVersion: 1.19
+  assetPath: Assets/Toon Water URP/DemoScene/Materials/CubeMaterial.mat
+  uploadId: 513463
