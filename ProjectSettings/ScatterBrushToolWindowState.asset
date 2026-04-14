@@ -23,7 +23,7 @@ MonoBehaviour:
   useMeshSurfaceHit: 1
   meshSurfaceLayerMask:
     serializedVersion: 2
-    m_Bits: 2147483703
+    m_Bits: 4294967295
   maxSurfaceSlopeDeg: 60
   meshHitDistance: 500
   fallbackToFieldPlane: 1
