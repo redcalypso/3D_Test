@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: f01c1c57da365e5428a918b893fe3ff7
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 170520
+  packageName: Toon Water URP
+  packageVersion: 1.19
+  assetPath: Assets/Toon Water URP/Functions/OtherLightsInfo.cginc
+  uploadId: 513463

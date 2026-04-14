@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 268205336744f064d922e191ec6947d0
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 170520
+  packageName: Toon Water URP
+  packageVersion: 1.19
+  assetPath: Assets/Toon Water URP/Functions/DirLightInfo.cginc
+  uploadId: 513463
