@@ -79,6 +79,7 @@ public sealed class InteractionMapBakerV2 : MonoBehaviour
     private static readonly int IdArcAngle = Shader.PropertyToID("_ArcAngle");
     private static readonly int IdArcSoftness = Shader.PropertyToID("_ArcSoftness");
     private static readonly int IdArcForward = Shader.PropertyToID("_ArcForward");
+    private static readonly int IdCurrentCamXZ = Shader.PropertyToID("_CurrentCamXZ");
 
     private int _rtId;
     private int _camPosXZId;
@@ -337,12 +338,12 @@ public sealed class InteractionMapBakerV2 : MonoBehaviour
             _stampMaterial.SetFloat(IdWeightMultiplier, req.preset.weightMultiplier);
             _stampMaterial.SetFloat(IdMaxForce, Mathf.Max(0.0001f, req.preset.maxForce));
             _stampMaterial.SetFloat(IdDirectionMode, (int)req.preset.directionMode);
-            _stampMaterial.SetInt(IdStampMode, (int)req.preset.blendMode);
+            _stampMaterial.SetFloat(IdStampMode, (float)(int)req.preset.blendMode);
             _stampMaterial.SetFloat(IdUseArcMask, req.useArcMask ? 1f : 0f);
             _stampMaterial.SetFloat(IdArcAngle, req.arcAngle);
             _stampMaterial.SetFloat(IdArcSoftness, req.arcSoftness);
             _stampMaterial.SetVector(IdArcForward, new Vector4(req.arcForward.x, req.arcForward.y, req.arcForward.z, 0f));
-            _stampMaterial.SetVector("_CurrentCamXZ", new Vector4(snapX, snapZ, 0f, 0f));
+            _stampMaterial.SetVector(IdCurrentCamXZ, new Vector4(snapX, snapZ, 0f, 0f));
 
             Graphics.Blit(_prevRT, _currRT, _stampMaterial, 0);
             SwapRT();
@@ -358,8 +359,6 @@ public sealed class InteractionMapBakerV2 : MonoBehaviour
 
     private bool EnsureRuntimeResources()
     {
-        EnsureGlobalPropertyIds();
-
         if (_globalRelaxationShader == null)
             _globalRelaxationShader = Shader.Find("Hidden/Interaction/GlobalRelaxation");
         if (_globalRelaxationShader == null)

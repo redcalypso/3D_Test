@@ -163,6 +163,7 @@ public sealed class ScatterRenderManager : MonoBehaviour
         public CellRecord[] sortedCellsScratch;
         public int currentSettingsHash;
         public int currentDataVersion = -1;
+        public int currentTransformHash;
         public bool listsDirty = true;
         public bool listsReady = false;
         public Bounds cachedWorldBounds;
@@ -172,7 +173,7 @@ public sealed class ScatterRenderManager : MonoBehaviour
         public FieldSourceState()
         {
             for (int i = 0; i < lists.Length; i++)
-                lists[i] = new List<Matrix4x4>(1024);
+                lists[i] = new List<Matrix4x4>(64);
         }
     }
 
@@ -379,19 +380,20 @@ public sealed class ScatterRenderManager : MonoBehaviour
         if (state == null || field == null || cam == null)
             return false;
 
-        EnsureFieldListsUpToDate(state);
-
         // In edit-mode SceneView, show full data without LOD/culling for authoring.
         if (!Application.isPlaying && cam.cameraType == CameraType.SceneView)
         {
+            EnsureFieldListsUpToDate(state);
             lodStride = 1;
             return true;
         }
 
+        // In play mode, reject non-visible chunks before rebuilding their instance matrices.
         Bounds bounds = GetFieldChunkWorldBounds(state, field);
         if (!GeometryUtility.TestPlanesAABB(s_frustumPlanes, bounds))
             return false;
 
+        EnsureFieldListsUpToDate(state);
         lodStride = ComputeFieldDistanceLodStride(field, bounds, cam, out _);
         return lodStride > 0;
     }
@@ -421,6 +423,7 @@ public sealed class ScatterRenderManager : MonoBehaviour
         BuildFieldListsDeterministic(state);
         state.currentSettingsHash = ComputeFieldSettingsHash(state);
         state.currentDataVersion = state.roomData != null ? state.roomData.DataVersion : -1;
+        state.currentTransformHash = ComputeRootTransformHash(state.root);
         state.listsDirty = false;
         state.listsReady = true;
         if (state.root != null)
@@ -435,22 +438,19 @@ public sealed class ScatterRenderManager : MonoBehaviour
             return true;
         if (state.surface == null || state.chunk == null || state.roomData == null)
             return false;
-        // In edit mode, only rebuild if transform changed or data is dirty
-        if (!Application.isPlaying)
-        {
-            if (!state.listsReady)
-                return true;
-            if (state.root != null && state.root.hasChanged)
-                return true;
-            if (state.roomData != null && state.roomData.DataVersion != state.currentDataVersion)
-                return true;
-            return ComputeFieldSettingsHash(state) != state.currentSettingsHash;
-        }
-        if (state.root != null && state.root.hasChanged)
+        int currentTransformHash = ComputeRootTransformHash(state.root);
+        if (!state.listsReady)
             return true;
-        if (ComputeFieldSettingsHash(state) != state.currentSettingsHash)
+        if (currentTransformHash != state.currentTransformHash)
             return true;
-        return state.roomData.DataVersion != state.currentDataVersion;
+        if (state.roomData.DataVersion != state.currentDataVersion)
+            return true;
+        return ComputeFieldSettingsHash(state) != state.currentSettingsHash;
+    }
+
+    private static int ComputeRootTransformHash(Transform root)
+    {
+        return root != null ? root.localToWorldMatrix.GetHashCode() : 0;
     }
 
     private static int ComputeFieldSettingsHash(FieldSourceState state)
@@ -485,10 +485,20 @@ public sealed class ScatterRenderManager : MonoBehaviour
 
         RoomScatterDataSO.SurfaceLayerData surface = state.surface;
         RoomScatterDataSO.ChunkData chunk = state.chunk;
+        int variationCount = Mathf.Clamp(surface.EffectiveVariationCount, 1, state.lists.Length);
+        int cellCount = chunk.cells != null ? chunk.cells.Count : 0;
+
+        // Pre-grow only the variants we can actually fill for steadier first-build allocations.
+        int estimatedPerVariant = Mathf.Max(64, ((cellCount + variationCount - 1) / variationCount) * 2);
+        for (int i = 0; i < variationCount; i++)
+        {
+            if (state.lists[i].Capacity < estimatedPerVariant)
+                state.lists[i].Capacity = estimatedPerVariant;
+        }
+
         float chunkSize = Mathf.Max(0.0001f, surface.chunkSize);
         float half = chunkSize * 0.5f;
         float cellSize = Mathf.Max(0.0001f, surface.cellSize);
-        int variationCount = surface.EffectiveVariationCount;
         uint globalSeed = surface.EffectiveGlobalSeed;
         float scaleMin = surface.EffectiveScaleMin;
         float scaleMax = surface.EffectiveScaleMax;
@@ -499,7 +509,7 @@ public sealed class ScatterRenderManager : MonoBehaviour
         int n = src != null ? src.Count : 0;
 
         if (state.sortedCellsScratch == null || state.sortedCellsScratch.Length < n)
-            state.sortedCellsScratch = new CellRecord[n];
+            state.sortedCellsScratch = new CellRecord[Mathf.NextPowerOfTwo(n)];
         for (int i = 0; i < n; i++)
             state.sortedCellsScratch[i] = src[i];
 
@@ -630,9 +640,10 @@ public sealed class ScatterRenderManager : MonoBehaviour
 
     private void FlushUsedBuckets()
     {
-        foreach (var pair in _buckets)
+        var enumerator = _buckets.GetEnumerator();
+        while (enumerator.MoveNext())
         {
-            DrawBucket bucket = pair.Value;
+            DrawBucket bucket = enumerator.Current.Value;
             if (!bucket.usedThisFrame)
                 continue;
 
@@ -640,6 +651,7 @@ public sealed class ScatterRenderManager : MonoBehaviour
             bucket.usedThisFrame = false;
             debugRenderedBuckets++;
         }
+        enumerator.Dispose();
     }
 
     private DrawBucket GetOrCreateBucket(in BucketKey key)
@@ -745,21 +757,33 @@ public sealed class ScatterRenderManager : MonoBehaviour
         return r;
     }
 
+    private static System.Type s_urpCamDataType;
+    private static System.Reflection.PropertyInfo s_renderTypeProp;
+    private static bool s_urpTypeResolved;
+
     private static bool IsUrpOverlayCamera(Camera cam)
     {
         if (cam == null)
             return false;
 
-        var additionalData = cam.GetComponent("UniversalAdditionalCameraData");
-        if (additionalData == null)
+        if (!s_urpTypeResolved)
+        {
+            s_urpCamDataType = System.Type.GetType(
+                "UnityEngine.Rendering.Universal.UniversalAdditionalCameraData, Unity.RenderPipelines.Universal.Runtime");
+            if (s_urpCamDataType != null)
+                s_renderTypeProp = s_urpCamDataType.GetProperty("renderType");
+            s_urpTypeResolved = true;
+        }
+
+        if (s_urpCamDataType == null || s_renderTypeProp == null)
             return false;
 
-        var renderTypeProp = additionalData.GetType().GetProperty("renderType");
-        if (renderTypeProp == null)
+        Component data = cam.GetComponent(s_urpCamDataType);
+        if (data == null)
             return false;
 
-        object renderTypeValue = renderTypeProp.GetValue(additionalData, null);
-        return renderTypeValue != null &&
-               string.Equals(renderTypeValue.ToString(), "Overlay", StringComparison.Ordinal);
+        object val = s_renderTypeProp.GetValue(data, null);
+        return val != null &&
+               string.Equals(val.ToString(), "Overlay", StringComparison.Ordinal);
     }
 }
