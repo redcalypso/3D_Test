@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: dc50233b4832685489c33629639a743f
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 249946
+  packageName: YSA Toon (Anime/Toon Shader)
+  packageVersion: 1.0
+  assetPath: Assets/YSA Toon/Scripts/SkinnedMeshNormalsFix.cs
+  uploadId: 571076

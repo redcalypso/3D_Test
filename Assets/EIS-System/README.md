@@ -1,0 +1,23 @@
+# 00.00 Lab Package Layout
+
+- Runtime/
+  - EnvironmentInteractionSystem/: interaction map baker and stamp preset runtime
+  - InteractableEnvironment/
+    - Scatter/Core: common scatter data and contracts
+    - Scatter/Rendering: runtime renderer(s)
+    - Scatter/Surfaces: per-surface profile types
+    - Resources: runtime scatter assets (models, prefabs, textures, materials)
+    - Shaders: runtime shader assets
+    - Debug/: placeholder/debug workspace
+  - Prefabs: ready-to-use runtime prefabs
+  - TesterScripts: runtime test scripts
+- Modules/
+  - MMF: optional MMFeedbacks integration scripts
+  - Prefabs/: placeholder
+- Editor/
+  - Tools: brush and migration tools
+- Samples~/
+  - Scenes: sample scenes
+  - Assets: sample-only resources
+- Documentation~/
+  - architecture notes

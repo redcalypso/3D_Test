@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 5e658bfc1e524494b9e54a1c92d8c1e0
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 249946
+  packageName: YSA Toon (Anime/Toon Shader)
+  packageVersion: 1.0
+  assetPath: Assets/YSA Toon/Examples/UnityChan/Scripts/FaceUpdate.cs
+  uploadId: 571076

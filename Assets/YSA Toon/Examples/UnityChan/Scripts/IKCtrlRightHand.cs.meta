@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 16931e3bbabb00f478bbbe4759af8343
+MonoImporter:
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 249946
+  packageName: YSA Toon (Anime/Toon Shader)
+  packageVersion: 1.0
+  assetPath: Assets/YSA Toon/Examples/UnityChan/Scripts/IKCtrlRightHand.cs
+  uploadId: 571076
