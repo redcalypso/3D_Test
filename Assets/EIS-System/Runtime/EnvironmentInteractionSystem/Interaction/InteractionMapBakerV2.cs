@@ -99,8 +99,29 @@ public sealed class InteractionMapBakerV2 : MonoBehaviour
     private float _lastSnapZ = float.NaN;
     private float _lastOrthoSize = float.NaN;
     private int _dirtyCountdown;
+    private RenderTextureFormat _cachedFmt;
+    private int _cachedRes = -1;
+    private bool _fmtSupported;
+    private System.Action<Vector3, float, Vector3, float> _pebbleStampHandler;
 
     public RenderTexture CurrentRT => _prevRT;
+
+    public void RegisterPebbleStampHandler(System.Action<Vector3, float, Vector3, float> handler)
+    {
+        if (handler == null)
+            return;
+
+        _pebbleStampHandler -= handler;
+        _pebbleStampHandler += handler;
+    }
+
+    public void UnregisterPebbleStampHandler(System.Action<Vector3, float, Vector3, float> handler)
+    {
+        if (handler == null)
+            return;
+
+        _pebbleStampHandler -= handler;
+    }
 
     public void RequestStamp(Vector3 worldPos, Vector3 dir, float sizeMul, float strengthMul, EISStampPreset preset)
     {
@@ -347,6 +368,8 @@ public sealed class InteractionMapBakerV2 : MonoBehaviour
 
             Graphics.Blit(_prevRT, _currRT, _stampMaterial, 0);
             SwapRT();
+
+            _pebbleStampHandler?.Invoke(req.worldPos, stampSize, dir, stampStrength);
         }
     }
 
@@ -383,11 +406,17 @@ public sealed class InteractionMapBakerV2 : MonoBehaviour
             };
         }
 
-        RenderTextureFormat fmt = _rtFormat;
-        if (!SystemInfo.SupportsRenderTextureFormat(fmt))
-            fmt = _allowFormatFallbackToARGB32 ? RenderTextureFormat.ARGB32 : _rtFormat;
-
+        // Cache format support check to avoid per-frame GC allocation
         int res = Mathf.Max(1, _rtResolution);
+        if (res != _cachedRes || _rtFormat != _cachedFmt)
+        {
+            _cachedRes = res;
+            _cachedFmt = _rtFormat;
+            _fmtSupported = SystemInfo.SupportsRenderTextureFormat(_rtFormat);
+        }
+        RenderTextureFormat fmt = _fmtSupported ? _rtFormat
+            : (_allowFormatFallbackToARGB32 ? RenderTextureFormat.ARGB32 : _rtFormat);
+
         if (!IsRTValid(_rtA, res, fmt))
         {
             ReleaseRT(ref _rtA);

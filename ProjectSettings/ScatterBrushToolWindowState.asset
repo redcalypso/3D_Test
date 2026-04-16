@@ -13,22 +13,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: MIDO.Scatter.Editor::ScatterBrushToolWindow/BrushState
   targetField: {fileID: 0}
-  surfaceType: 0
+  surfaceType: 1
   toolEnabled: 1
   useModifierShortcuts: 1
-  paintModeEnabled: 0
+  paintModeEnabled: 1
   capsScaleMode: 0
   autoCreateChunkOnPaint: 1
   showEditorPreview: 1
   useMeshSurfaceHit: 1
   meshSurfaceLayerMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 2147483703
   maxSurfaceSlopeDeg: 60
   meshHitDistance: 500
   fallbackToFieldPlane: 1
   mode: 0
-  radius: 2
+  radius: 1.51
   density: 1
   strength: 1
   scaleMode: 0

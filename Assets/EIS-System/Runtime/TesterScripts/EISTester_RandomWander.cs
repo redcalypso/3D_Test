@@ -26,15 +26,15 @@ public sealed class EISTester_RandomWander : MonoBehaviour
 
     private Vector3 GetRandomTarget()
     {
-        float x = Random.Range(_startPosition.x - 5f, _startPosition.x + 5f);
-        float z = Random.Range(_startPosition.z - 5f, _startPosition.z + 5f);
+        float x = Random.Range(_startPosition.x - 10f, _startPosition.x + 10f);
+        float z = Random.Range(_startPosition.z - 10f, _startPosition.z + 10f);
         return new Vector3(x, _startPosition.y, z);
     }
 
     private void OnDrawGizmosSelected()
     {
         Vector3 center = Application.isPlaying ? _startPosition : transform.position;
-        Vector3 size = new Vector3(10f, 0f, 10f);
+        Vector3 size = new Vector3(20f, 0f, 20f);
 
         Gizmos.color = Color.yellow;
         Gizmos.DrawWireCube(center, size);

@@ -1,4 +1,4 @@
-﻿using UnityEngine;
+using UnityEngine;
 
 public class EISTester_Brust : MonoBehaviour
 {
@@ -10,7 +10,7 @@ public class EISTester_Brust : MonoBehaviour
         if (!Input.GetMouseButtonDown(0) || bakerV2 == null || testPreset == null)
             return;
 
-        bakerV2.RequestStamp(transform.position, Vector3.forward, 1f, 1f, testPreset);
+        bakerV2.RequestStamp(transform.position, transform.forward, 1f, 1f, testPreset);
         Debug.Log("EIS tester stamp fired.");
     }
 }

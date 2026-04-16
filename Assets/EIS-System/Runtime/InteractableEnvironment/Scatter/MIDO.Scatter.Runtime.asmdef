@@ -1,7 +1,9 @@
 ﻿{
   "name": "MIDO.Scatter.Runtime",
   "rootNamespace": "",
-  "references": [],
+  "references": [
+    "MIDO.EIS.Runtime"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

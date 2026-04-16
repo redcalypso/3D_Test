@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: GrassScatterProfile
   m_EditorClassIdentifier: MIDO.Scatter.Runtime::GrassScatterProfileSO
   surfaceType: 0
-  variationCount: 8
+  variationCount: 1
   globalSeed: 12345
   scaleMin: 0.85
   scaleMax: 1.15

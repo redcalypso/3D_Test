@@ -283,6 +283,9 @@ public sealed class ScatterBrushToolWindow : EditorWindow
         }
 
         RoomScatterDataSO.SurfaceLayerData surface = sf.roomData.FindSurface(s.surfaceType);
+        if (surface != null && !sf.TryGetValidRenderConfig(surface, out _, out string renderConfigReason))
+            EditorGUILayout.HelpBox(renderConfigReason, MessageType.Warning);
+
         if (surface == null || surface.chunks == null || surface.chunks.Count == 0)
         {
             if (s.autoCreateChunkOnPaint)
@@ -1009,26 +1012,10 @@ public sealed class ScatterBrushToolWindow : EditorWindow
         if (field == null || view == null || !state.toolEnabled || !state.showEditorPreview)
             return;
 
-        if (!field.HasRenderConfig || field.sharedMaterial == null || field.variationMeshes == null || field.variationMeshes.Length == 0)
-            return;
-
         s_previewChunkScratch.Clear();
         field.CollectChunkRefs(s_previewChunkScratch);
         if (s_previewChunkScratch.Count == 0)
             return;
-
-        var mpb = new MaterialPropertyBlock();
-        if (field.overrideInteractionColorTuning)
-        {
-            mpb.SetFloat(IdPressColorWeight, field.pressColorWeight);
-            mpb.SetFloat(IdBendColorWeight, field.bendColorWeight);
-        }
-        // Editor preview must not read runtime instance-press buffers.
-        mpb.SetFloat(IdInstancePressCount, 0f);
-        mpb.SetFloat(IdPressCount, 0f);
-        mpb.SetFloat(IdBaseInstanceIndex, 0f);
-
-        Material previewMaterial = field.sharedMaterial;
 
         for (int c = 0; c < s_previewChunkScratch.Count; c++)
         {
@@ -1036,7 +1023,22 @@ public sealed class ScatterBrushToolWindow : EditorWindow
             if (chunkRef.surface == null || chunkRef.chunk == null || chunkRef.chunk.cells == null || chunkRef.chunk.cells.Count == 0)
                 continue;
 
-            DrawChunkPreview(field, chunkRef, view.camera, previewMaterial, mpb);
+            if (!field.TryGetValidRenderConfig(chunkRef.surface, out ScatterSurfaceRenderConfig renderConfig, out _))
+                continue;
+
+            var mpb = new MaterialPropertyBlock();
+            if (renderConfig.overrideInteractionColorTuning)
+            {
+                mpb.SetFloat(IdPressColorWeight, renderConfig.pressColorWeight);
+                mpb.SetFloat(IdBendColorWeight, renderConfig.bendColorWeight);
+            }
+
+            // Editor preview must not read runtime instance-press buffers.
+            mpb.SetFloat(IdInstancePressCount, 0f);
+            mpb.SetFloat(IdPressCount, 0f);
+            mpb.SetFloat(IdBaseInstanceIndex, 0f);
+
+            DrawChunkPreview(field, chunkRef, renderConfig, view.camera, mpb);
         }
     }
 
@@ -1164,14 +1166,14 @@ public sealed class ScatterBrushToolWindow : EditorWindow
         SceneView.RepaintAll();
     }
 
-    private static void DrawChunkPreview(ScatterField field, RoomScatterDataSO.ChunkRef chunkRef, Camera cam, Material previewMaterial, MaterialPropertyBlock mpb)
+    private static void DrawChunkPreview(ScatterField field, RoomScatterDataSO.ChunkRef chunkRef, ScatterSurfaceRenderConfig renderConfig, Camera cam, MaterialPropertyBlock mpb)
     {
-        if (field == null || chunkRef.surface == null || chunkRef.chunk == null || cam == null)
+        if (field == null || chunkRef.surface == null || chunkRef.chunk == null || renderConfig == null || cam == null)
             return;
 
         RoomScatterDataSO.SurfaceLayerData surface = chunkRef.surface;
         RoomScatterDataSO.ChunkData chunk = chunkRef.chunk;
-        int variationCount = Mathf.Clamp(surface.EffectiveVariationCount, 1, Mathf.Min(16, field.variationMeshes.Length));
+        int variationCount = Mathf.Clamp(surface.EffectiveVariationCount, 1, Mathf.Min(16, renderConfig.variationMeshes.Length));
         if (variationCount <= 0)
             return;
 
@@ -1187,7 +1189,7 @@ public sealed class ScatterBrushToolWindow : EditorWindow
 
         for (int variant = 0; variant < variationCount; variant++)
         {
-            Mesh mesh = field.variationMeshes[Mathf.Min(variant, field.variationMeshes.Length - 1)];
+            Mesh mesh = renderConfig.variationMeshes[variant];
             if (mesh == null)
                 continue;
 
@@ -1226,7 +1228,7 @@ public sealed class ScatterBrushToolWindow : EditorWindow
                 if (count >= s_previewMatrices.Length)
                 {
                     Graphics.DrawMeshInstanced(
-                        mesh, 0, previewMaterial, s_previewMatrices, count, mpb,
+                        mesh, 0, renderConfig.sharedMaterial, s_previewMatrices, count, mpb,
                         ShadowCastingMode.Off, false, field.gameObject.layer, cam);
                     count = 0;
                 }
@@ -1235,7 +1237,7 @@ public sealed class ScatterBrushToolWindow : EditorWindow
             if (count > 0)
             {
                 Graphics.DrawMeshInstanced(
-                    mesh, 0, previewMaterial, s_previewMatrices, count, mpb,
+                    mesh, 0, renderConfig.sharedMaterial, s_previewMatrices, count, mpb,
                     ShadowCastingMode.Off, false, field.gameObject.layer, cam);
             }
         }

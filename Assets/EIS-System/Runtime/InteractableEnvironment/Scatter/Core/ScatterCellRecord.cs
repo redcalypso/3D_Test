@@ -10,9 +10,21 @@ public struct CellRecord
     public byte scaleByte;
     public float localY;
     public Vector3 localNormal;
+    [NonSerialized] public Vector3 displacement;
+    [NonSerialized] public Vector3 targetDisplacement;
+    [NonSerialized] public Quaternion rollRotation;
+    [NonSerialized] public Quaternion targetRollRotation;
 
     public static int Key(int cx, int cy, int cellsPerAxis) => cy * cellsPerAxis + cx;
     public int Key(int cellsPerAxis) => Key(cx, cy, cellsPerAxis);
+
+    public void ResetRuntimeState()
+    {
+        displacement = Vector3.zero;
+        targetDisplacement = Vector3.zero;
+        rollRotation = Quaternion.identity;
+        targetRollRotation = Quaternion.identity;
+    }
 
     public float Scale(float min, float max)
     {

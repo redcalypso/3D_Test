@@ -13,8 +13,7 @@ public sealed class ScatterFieldEditor : Editor
         serializedObject.Update();
 
         SerializedProperty roomDataProp = serializedObject.FindProperty("roomData");
-        SerializedProperty variationMeshesProp = serializedObject.FindProperty("variationMeshes");
-        SerializedProperty sharedMaterialProp = serializedObject.FindProperty("sharedMaterial");
+        SerializedProperty surfaceRenderConfigsProp = serializedObject.FindProperty("surfaceRenderConfigs");
         SerializedProperty projectToStaticSurfaceProp = serializedObject.FindProperty("projectToStaticSurface");
         SerializedProperty projectionLayerMaskProp = serializedObject.FindProperty("projectionLayerMask");
         SerializedProperty projectionRayStartHeightProp = serializedObject.FindProperty("projectionRayStartHeight");
@@ -27,9 +26,6 @@ public sealed class ScatterFieldEditor : Editor
         SerializedProperty lodMidStrideProp = serializedObject.FindProperty("lodMidStride");
         SerializedProperty enableInstanceCullingProp = serializedObject.FindProperty("enableInstanceCulling");
         SerializedProperty instanceCullPaddingProp = serializedObject.FindProperty("instanceCullPadding");
-        SerializedProperty overrideInteractionColorTuningProp = serializedObject.FindProperty("overrideInteractionColorTuning");
-        SerializedProperty pressColorWeightProp = serializedObject.FindProperty("pressColorWeight");
-        SerializedProperty bendColorWeightProp = serializedObject.FindProperty("bendColorWeight");
 
         EditorGUILayout.PropertyField(roomDataProp);
 
@@ -65,9 +61,9 @@ public sealed class ScatterFieldEditor : Editor
         }
 
         EditorGUILayout.Space(6);
-        EditorGUILayout.LabelField("Render Source", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(variationMeshesProp);
-        EditorGUILayout.PropertyField(sharedMaterialProp);
+        EditorGUILayout.LabelField("Surface Render Configs", EditorStyles.boldLabel);
+        EditorGUILayout.PropertyField(surfaceRenderConfigsProp, includeChildren: true);
+        DrawRenderConfigValidation(field, roomData);
 
         EditorGUILayout.Space(4);
         EditorGUILayout.LabelField("Surface Projection", EditorStyles.boldLabel);
@@ -96,13 +92,10 @@ public sealed class ScatterFieldEditor : Editor
             EditorGUILayout.PropertyField(instanceCullPaddingProp);
 
         EditorGUILayout.Space(4);
-        EditorGUILayout.LabelField("Interaction Color Tuning", EditorStyles.boldLabel);
-        EditorGUILayout.PropertyField(overrideInteractionColorTuningProp);
-        if (overrideInteractionColorTuningProp.boolValue)
-        {
-            EditorGUILayout.PropertyField(pressColorWeightProp);
-            EditorGUILayout.PropertyField(bendColorWeightProp);
-        }
+        EditorGUILayout.LabelField("Diagnostics", EditorStyles.boldLabel);
+        SerializedProperty debugPebbleMotionProp = serializedObject.FindProperty("debugPebbleMotion");
+        if (debugPebbleMotionProp != null)
+            EditorGUILayout.PropertyField(debugPebbleMotionProp, new GUIContent("Debug Pebble Motion", "Enable detailed pebble displacement diagnostic logs in the Console."));
 
         EditorGUILayout.Space(8);
         using (new EditorGUILayout.HorizontalScope())
@@ -190,6 +183,145 @@ public sealed class ScatterFieldEditor : Editor
             EditorGUILayout.HelpBox("Some surfaces contain null chunk entries.", MessageType.Warning);
         if (hasDuplicateSurface)
             EditorGUILayout.HelpBox("Duplicate surface types found in RoomScatterDataSO chunks.", MessageType.Warning);
+    }
+
+    private static void DrawRenderConfigValidation(ScatterField field, RoomScatterDataSO roomData)
+    {
+        if (field == null)
+            return;
+
+        List<ScatterSurfaceRenderConfig> configs = field.surfaceRenderConfigs;
+        if (configs == null || configs.Count == 0)
+        {
+            EditorGUILayout.HelpBox("Surface render config required. No surface render configs are assigned.", MessageType.Warning);
+            return;
+        }
+
+        s_surfaceSet.Clear();
+        bool hasDuplicateConfigSurface = false;
+        bool hasInvalidConfig = false;
+
+        for (int i = 0; i < configs.Count; i++)
+        {
+            ScatterSurfaceRenderConfig config = configs[i];
+            if (config == null)
+            {
+                hasInvalidConfig = true;
+                continue;
+            }
+
+            if (!s_surfaceSet.Add(config.surfaceType))
+                hasDuplicateConfigSurface = true;
+
+            int requiredVariationCount = 1;
+            RoomScatterDataSO.SurfaceLayerData roomSurface = roomData != null ? roomData.FindSurface(config.surfaceType) : null;
+            if (roomSurface != null)
+                requiredVariationCount = roomSurface.EffectiveVariationCount;
+            else if (config.variationMeshes != null && config.variationMeshes.Length > 0)
+                requiredVariationCount = config.variationMeshes.Length;
+
+            DrawVariationCountControls(roomData, roomSurface, config);
+
+            if (!ScatterField.ValidateRenderConfig(config, requiredVariationCount, out string reason))
+            {
+                hasInvalidConfig = true;
+                EditorGUILayout.HelpBox(reason, MessageType.Warning);
+            }
+        }
+
+        if (roomData != null && roomData.surfaces != null)
+        {
+            for (int i = 0; i < roomData.surfaces.Count; i++)
+            {
+                RoomScatterDataSO.SurfaceLayerData surface = roomData.surfaces[i];
+                if (surface == null)
+                    continue;
+
+                if (!field.TryGetRenderConfig(surface.surfaceType, out _))
+                    EditorGUILayout.HelpBox($"Surface render config required for {surface.surfaceType}.", MessageType.Warning);
+            }
+        }
+
+        if (hasDuplicateConfigSurface)
+            EditorGUILayout.HelpBox("Duplicate surface types found in Surface Render Configs.", MessageType.Warning);
+        else if (!hasInvalidConfig && roomData != null && roomData.surfaces != null && roomData.surfaces.Count > 0)
+            EditorGUILayout.HelpBox("Surface render configs are valid.", MessageType.Info);
+    }
+
+    private static void DrawVariationCountControls(RoomScatterDataSO roomData, RoomScatterDataSO.SurfaceLayerData roomSurface, ScatterSurfaceRenderConfig config)
+    {
+        if (config == null)
+            return;
+
+        using (new EditorGUILayout.VerticalScope(EditorStyles.helpBox))
+        {
+            EditorGUILayout.LabelField($"{config.surfaceType} Variation Count", EditorStyles.boldLabel);
+
+            int meshCount = config.variationMeshes != null ? config.variationMeshes.Length : 0;
+            EditorGUILayout.LabelField("Assigned Mesh Count", meshCount.ToString());
+
+            if (roomSurface == null)
+            {
+                EditorGUILayout.HelpBox($"RoomScatterDataSO surface is missing for {config.surfaceType}. Add the surface first to control variation count.", MessageType.Info);
+                return;
+            }
+
+            if (roomSurface.profile != null)
+            {
+                ScatterLayerProfileSO profile = roomSurface.profile;
+                int next = EditorGUILayout.IntSlider("Profile Variation Count", profile.variationCount, 1, 16);
+                using (new EditorGUILayout.HorizontalScope())
+                {
+                    if (next != profile.variationCount)
+                    {
+                        Undo.RecordObject(profile, "Change Scatter Profile Variation Count");
+                        profile.variationCount = next;
+                        EditorUtility.SetDirty(profile);
+                    }
+
+                    if (GUILayout.Button("Match Mesh Count", GUILayout.Width(140f)))
+                    {
+                        int target = Mathf.Clamp(meshCount, 1, 16);
+                        if (profile.variationCount != target)
+                        {
+                            Undo.RecordObject(profile, "Match Scatter Profile Variation Count");
+                            profile.variationCount = target;
+                            EditorUtility.SetDirty(profile);
+                        }
+                    }
+
+                    if (GUILayout.Button("Ping Profile", GUILayout.Width(100f)))
+                        EditorGUIUtility.PingObject(profile);
+                }
+
+                EditorGUILayout.HelpBox($"Effective variation count is currently driven by profile '{profile.name}'.", MessageType.None);
+                return;
+            }
+
+            int updated = EditorGUILayout.IntSlider("Surface Variation Count", roomSurface.variationCount, 1, 16);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (updated != roomSurface.variationCount)
+                {
+                    Undo.RecordObject(roomData, "Change Surface Variation Count");
+                    roomSurface.variationCount = updated;
+                    roomData.Touch();
+                    EditorUtility.SetDirty(roomData);
+                }
+
+                if (GUILayout.Button("Match Mesh Count", GUILayout.Width(140f)))
+                {
+                    int target = Mathf.Clamp(meshCount, 1, 16);
+                    if (roomSurface.variationCount != target)
+                    {
+                        Undo.RecordObject(roomData, "Match Surface Variation Count");
+                        roomSurface.variationCount = target;
+                        roomData.Touch();
+                        EditorUtility.SetDirty(roomData);
+                    }
+                }
+            }
+        }
     }
 }
 #endif

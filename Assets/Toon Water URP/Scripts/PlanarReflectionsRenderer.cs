@@ -63,15 +63,19 @@ public class PlanarReflectionsRenderer : MonoBehaviour
     private float lodBiasBeforeReflections;
 
     private int currentFrame = 0;
+    private Camera pendingSourceCamera;
+    private bool hasPendingRender;
 
     private void OnEnable()
     {
-        RenderPipelineManager.beginCameraRendering += RenderReflections;
+        RenderPipelineManager.beginCameraRendering += QueueReflectionRender;
     }
 
     private void Cleanup()
     {
-        RenderPipelineManager.beginCameraRendering -= RenderReflections;
+        RenderPipelineManager.beginCameraRendering -= QueueReflectionRender;
+        pendingSourceCamera = null;
+        hasPendingRender = false;
 
         if(reflectionCamera)
         {
@@ -100,6 +104,16 @@ public class PlanarReflectionsRenderer : MonoBehaviour
     private void OnDestroy()
     {
         Cleanup();
+    }
+
+    private void LateUpdate()
+    {
+        if (!hasPendingRender || pendingSourceCamera == null)
+            return;
+
+        RenderReflections(pendingSourceCamera);
+        pendingSourceCamera = null;
+        hasPendingRender = false;
     }
 
     private void UpdateCamera(Camera src, Camera dest)
@@ -146,20 +160,21 @@ public class PlanarReflectionsRenderer : MonoBehaviour
         Vector4 reflectionPlane = new Vector4(planeNormal.x, planeNormal.y, planeNormal.z, w);
 
         Matrix4x4 reflection = Matrix4x4.identity;
-        reflection *= Matrix4x4.Scale(new Vector3(1, -1, 1));
-
         CalculateReflectionMatrix(ref reflection, reflectionPlane);
-        Vector3 oldPosition = realCamera.transform.position - new Vector3(0, planePosition.y * 2, 0);
-        Vector3 newPosition = new Vector3(oldPosition.x, -oldPosition.y, oldPosition.z);
-        reflectionCamera.transform.forward = Vector3.Scale(realCamera.transform.forward, new Vector3(1, -1, 1));
-        reflectionCamera.worldToCameraMatrix = realCamera.worldToCameraMatrix * reflection;
+
+        Vector3 reflectedPosition = reflection.MultiplyPoint(realCamera.transform.position);
+        Vector3 reflectedForward = Vector3.Reflect(realCamera.transform.forward, planeNormal);
+        Vector3 reflectedUp = Vector3.Reflect(realCamera.transform.up, planeNormal);
+        reflectionCamera.transform.SetPositionAndRotation(
+            reflectedPosition,
+            Quaternion.LookRotation(reflectedForward, reflectedUp));
+        reflectionCamera.worldToCameraMatrix = reflectionCamera.transform.worldToLocalMatrix;
 
         //calculate clip plane and projection matrix for reflection camera
-        Vector4 clipPlane = WorldToCameraSpacePlane(reflectionCamera, planePosition - Vector3.up * 0.1f, planeNormal, 1.0f);
-        Matrix4x4 projection = realCamera.CalculateObliqueMatrix(clipPlane);
+        Vector4 clipPlane = WorldToCameraSpacePlane(reflectionCamera, planePosition, planeNormal, 1.0f);
+        Matrix4x4 projection = reflectionCamera.CalculateObliqueMatrix(clipPlane);
         reflectionCamera.projectionMatrix = projection;
         reflectionCamera.cullingMask = LayersToReflect;
-        reflectionCamera.transform.position = newPosition;
     }
 
     private Camera CreateReflectionCamera()
@@ -207,11 +222,20 @@ public class PlanarReflectionsRenderer : MonoBehaviour
         reflectionCamera.targetTexture = reflectionTexture;
     }
   
-    private void RenderReflections(ScriptableRenderContext context, Camera camera)
+    private void QueueReflectionRender(ScriptableRenderContext context, Camera camera)
     {
-        if(camera.cameraType == CameraType.Reflection || camera.cameraType == CameraType.Preview)
+        if(camera == null || camera == reflectionCamera || camera.cameraType == CameraType.Reflection || camera.cameraType == CameraType.Preview)
             return;
-         
+
+        pendingSourceCamera = camera;
+        hasPendingRender = true;
+    }
+
+    private void RenderReflections(Camera camera)
+    {
+        if(camera == null)
+            return;
+
         currentFrame++; 
         if(currentFrame % GetSkipFrameValue() != 0)
             return;
@@ -231,7 +255,14 @@ public class PlanarReflectionsRenderer : MonoBehaviour
         QualitySettings.lodBias = lodBiasBeforeReflections * 0.5f;
 
         //render
-        UniversalRenderPipeline.RenderSingleCamera(context, reflectionCamera); 
+        var request = new UniversalRenderPipeline.SingleCameraRequest
+        {
+            destination = reflectionTexture,
+            mipLevel = 0,
+            slice = 0,
+            face = CubemapFace.Unknown
+        };
+        RenderPipeline.SubmitRenderRequest(reflectionCamera, request);
 
         //restore quality settings
         GL.invertCulling = false;
